@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { type ReactNode } from 'react'
 import { Pencil, Trash2, Plus, Settings2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -24,6 +25,7 @@ type ContentTableProps = {
   onNew: () => void
   onEdit: (row: ContentRow) => void
   manageHrefPrefix?: string
+  filterSlot?: ReactNode
 }
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
@@ -32,7 +34,7 @@ const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = 
   archived: 'secondary',
 }
 
-export function ContentTable({ title, description, initialRows, onNew, onEdit, manageHrefPrefix }: ContentTableProps) {
+export function ContentTable({ title, description, initialRows, onNew, onEdit, manageHrefPrefix, filterSlot }: ContentTableProps) {
   const [rows, setRows] = useState(initialRows)
   const [query, setQuery] = useState('')
   const [, startTransition] = useTransition()
@@ -54,7 +56,10 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, m
         </Button>
       </PageHeader>
 
-      <SearchInput value={query} onChange={setQuery} placeholder={`Search ${title.toLowerCase()}…`} className="max-w-xs" />
+      <div className="flex items-center gap-3 flex-wrap">
+        <SearchInput value={query} onChange={setQuery} placeholder={`Search ${title.toLowerCase()}…`} className="max-w-xs" />
+        {filterSlot}
+      </div>
 
       <div className="rounded-xl border border-border overflow-hidden">
         <table className="w-full text-sm">
