@@ -1,0 +1,133 @@
+export type CommunityThread = {
+  id: string
+  title: string
+  authorName: string
+  authorEmail: string
+  category: string
+  replyCount: number
+  flagged: boolean
+  createdAt: string
+}
+
+export const mockCommunityThreads: CommunityThread[] = [
+  {
+    id: 'ct-1',
+    title: 'Tips for improving Writing Task 2 coherence?',
+    authorName: 'Alex Johnson',
+    authorEmail: 'alex.johnson@example.com',
+    category: 'Writing',
+    replyCount: 12,
+    flagged: false,
+    createdAt: '2026-05-10',
+  },
+  {
+    id: 'ct-2',
+    title: 'What resources do you use for listening practice?',
+    authorName: 'Priya Sharma',
+    authorEmail: 'priya.sharma@example.com',
+    category: 'Listening',
+    replyCount: 8,
+    flagged: false,
+    createdAt: '2026-05-15',
+  },
+  {
+    id: 'ct-3',
+    title: 'SPAM: Buy cheap IELTS certificates!!!',
+    authorName: 'Unknown User',
+    authorEmail: 'spammer@fake.com',
+    category: 'General',
+    replyCount: 0,
+    flagged: true,
+    createdAt: '2026-05-20',
+  },
+  {
+    id: 'ct-4',
+    title: 'How long did you prepare before scoring Band 7?',
+    authorName: 'Mohamed Al-Rashid',
+    authorEmail: 'mohamed.alrashid@example.com',
+    category: 'General',
+    replyCount: 24,
+    flagged: false,
+    createdAt: '2026-05-22',
+  },
+  {
+    id: 'ct-5',
+    title: 'Reading strategies for heading matching questions',
+    authorName: 'Yuki Tanaka',
+    authorEmail: 'yuki.tanaka@example.com',
+    category: 'Reading',
+    replyCount: 6,
+    flagged: false,
+    createdAt: '2026-05-25',
+  },
+  {
+    id: 'ct-6',
+    title: 'Need help with Speaking Part 3 — too nervous!',
+    authorName: 'Carlos Mendez',
+    authorEmail: 'carlos.mendez@example.com',
+    category: 'Speaking',
+    replyCount: 15,
+    flagged: false,
+    createdAt: '2026-05-28',
+  },
+  {
+    id: 'ct-7',
+    title: 'Is the General Training easier than Academic?',
+    authorName: 'Fatima Nour',
+    authorEmail: 'fatima.nour@example.com',
+    category: 'General',
+    replyCount: 19,
+    flagged: false,
+    createdAt: '2026-06-01',
+  },
+  {
+    id: 'ct-8',
+    title: 'Share your band score improvement stories!',
+    authorName: 'James Okafor',
+    authorEmail: 'james.okafor@example.com',
+    category: 'Success Stories',
+    replyCount: 42,
+    flagged: false,
+    createdAt: '2026-06-02',
+  },
+  {
+    id: 'ct-9',
+    title: 'Inappropriate content — misleading advice',
+    authorName: 'Anonymous',
+    authorEmail: 'anon@example.com',
+    category: 'Study Tips',
+    replyCount: 2,
+    flagged: true,
+    createdAt: '2026-06-03',
+  },
+  {
+    id: 'ct-10',
+    title: 'Best apps for building IELTS vocabulary?',
+    authorName: 'Lin Wei',
+    authorEmail: 'lin.wei@example.com',
+    category: 'Vocabulary',
+    replyCount: 11,
+    flagged: false,
+    createdAt: '2026-06-04',
+  },
+  {
+    id: 'ct-11',
+    title: 'Mock test timing strategies — how do you manage?',
+    authorName: 'Aisha Patel',
+    authorEmail: 'aisha.patel@example.com',
+    category: 'Mock Tests',
+    replyCount: 7,
+    flagged: false,
+    createdAt: '2026-06-05',
+  },
+  {
+    id: 'ct-12',
+    title: 'Study group — anyone preparing for July 2026 exam?',
+    authorName: 'David Kim',
+    authorEmail: 'david.kim@example.com',
+    category: 'General',
+    replyCount: 31,
+    flagged: false,
+    createdAt: '2026-06-06',
+  },
+]
