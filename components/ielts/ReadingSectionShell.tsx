@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
 import { ReadingQuestionFormModal } from './ReadingQuestionFormModal'
-import type { FullReadingTest, ReadingSection, ReadingQuestion } from '@/lib/types/ielts'
+import type { FullReadingTest, ReadingSection, ReadingQuestion, SetContext } from '@/lib/types/ielts'
 
 const typeLabels: Record<ReadingQuestion['type'], string> = {
   mcq: 'MCQ',
@@ -31,9 +31,10 @@ function getStem(q: ReadingQuestion): string {
 type ReadingSectionShellProps = {
   test: FullReadingTest
   section: ReadingSection
+  setContext?: SetContext
 }
 
-export function ReadingSectionShell({ test, section: initialSection }: ReadingSectionShellProps) {
+export function ReadingSectionShell({ test, section: initialSection, setContext }: ReadingSectionShellProps) {
   const [section, setSection] = useState(initialSection)
   const [showFullPassage, setShowFullPassage] = useState(false)
   const [questionModalOpen, setQuestionModalOpen] = useState(false)
@@ -62,7 +63,13 @@ export function ReadingSectionShell({ test, section: initialSection }: ReadingSe
   return (
     <>
       <div className="p-5 sm:p-6 space-y-6 max-w-3xl mx-auto">
-        <Breadcrumb items={[
+        <Breadcrumb items={setContext ? [
+          { label: 'Sets', href: '/ielts/mock-tests' },
+          { label: setContext.setTitle, href: `/ielts/mock-tests/${setContext.setId}` },
+          { label: `Test ${setContext.testIndex}`, href: `/ielts/mock-tests/${setContext.setId}/tests/${setContext.testId}` },
+          { label: test.title, href: `/ielts/reading/${test.id}?setId=${setContext.setId}&setTitle=${encodeURIComponent(setContext.setTitle)}&testId=${setContext.testId}&testIndex=${setContext.testIndex}` },
+          { label: section.passage.title },
+        ] : [
           { label: 'Reading Tests', href: '/ielts/reading' },
           { label: test.title, href: `/ielts/reading/${test.id}` },
           { label: section.passage.title },

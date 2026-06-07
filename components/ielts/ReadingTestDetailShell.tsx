@@ -9,7 +9,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { ContentFormModal } from './ContentFormModal'
 import { ReadingSectionFormModal } from './ReadingSectionFormModal'
 import { Breadcrumb } from './Breadcrumb'
-import type { FullReadingTest, ReadingSection, IeltsStatus } from '@/lib/types/ielts'
+import type { FullReadingTest, ReadingSection, IeltsStatus, SetContext } from '@/lib/types/ielts'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
   published: 'success',
@@ -19,13 +19,14 @@ const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = 
 
 type ReadingTestDetailShellProps = {
   test: FullReadingTest
+  setContext?: SetContext
 }
 
 function genId() {
   return `s-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
 
-export function ReadingTestDetailShell({ test: initial }: ReadingTestDetailShellProps) {
+export function ReadingTestDetailShell({ test: initial, setContext }: ReadingTestDetailShellProps) {
   const [test, setTest] = useState(initial)
   const [metaModalOpen, setMetaModalOpen] = useState(false)
   const [sectionModalOpen, setSectionModalOpen] = useState(false)
@@ -66,7 +67,15 @@ export function ReadingTestDetailShell({ test: initial }: ReadingTestDetailShell
   return (
     <>
       <div className="p-5 sm:p-6 space-y-6 max-w-3xl mx-auto">
-        <Breadcrumb items={[{ label: 'Reading Tests', href: '/ielts/reading' }, { label: test.title }]} />
+        <Breadcrumb items={setContext ? [
+          { label: 'Sets', href: '/ielts/mock-tests' },
+          { label: setContext.setTitle, href: `/ielts/mock-tests/${setContext.setId}` },
+          { label: `Test ${setContext.testIndex}`, href: `/ielts/mock-tests/${setContext.setId}/tests/${setContext.testId}` },
+          { label: test.title },
+        ] : [
+          { label: 'Reading Tests', href: '/ielts/reading' },
+          { label: test.title },
+        ]} />
 
         <div className="space-y-3">
           <PageHeader title={test.title} description={`${test.type} · ${test.durationMinutes} min`}>
@@ -112,7 +121,7 @@ export function ReadingTestDetailShell({ test: initial }: ReadingTestDetailShell
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <Link
-                    href={`/ielts/reading/${test.id}/sections/${section.id}`}
+                    href={`/ielts/reading/${test.id}/sections/${section.id}${setContext ? `?setId=${setContext.setId}&setTitle=${encodeURIComponent(setContext.setTitle)}&testId=${setContext.testId}&testIndex=${setContext.testIndex}` : ''}`}
                     className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
                     title="Manage section"
                   >

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
-import type { FullWritingTask, IeltsStatus } from '@/lib/types/ielts'
+import type { FullWritingTask, IeltsStatus, SetContext } from '@/lib/types/ielts'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
   published: 'success',
@@ -20,9 +20,10 @@ const textareaClass =
 
 type WritingTaskDetailShellProps = {
   task: FullWritingTask
+  setContext?: SetContext
 }
 
-export function WritingTaskDetailShell({ task: initial }: WritingTaskDetailShellProps) {
+export function WritingTaskDetailShell({ task: initial, setContext }: WritingTaskDetailShellProps) {
   const [task, setTask] = useState(initial)
   const [dirty, setDirty] = useState(false)
 
@@ -43,7 +44,15 @@ export function WritingTaskDetailShell({ task: initial }: WritingTaskDetailShell
 
   return (
     <div className="p-5 sm:p-6 space-y-6 max-w-5xl mx-auto">
-      <Breadcrumb items={[{ label: 'Writing Tasks', href: '/ielts/writing' }, { label: task.title }]} />
+      <Breadcrumb items={setContext ? [
+        { label: 'Sets', href: '/ielts/mock-tests' },
+        { label: setContext.setTitle, href: `/ielts/mock-tests/${setContext.setId}` },
+        { label: `Test ${setContext.testIndex}`, href: `/ielts/mock-tests/${setContext.setId}/tests/${setContext.testId}` },
+        { label: task.title },
+      ] : [
+        { label: 'Writing Tasks', href: '/ielts/writing' },
+        { label: task.title },
+      ]} />
 
       <div className="space-y-3">
         <PageHeader title={task.title} description="">

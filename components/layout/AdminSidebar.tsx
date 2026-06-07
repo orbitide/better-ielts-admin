@@ -197,19 +197,6 @@ export function AdminSidebar() {
             onClick={() => setProfileOpen((v) => !v)}
             className="flex items-center gap-2.5 px-3 py-3 w-full hover:bg-sidebar-accent/60 transition-colors"
           >
-            {admin?.avatarUrl ? (
-              <Image
-                src={admin.avatarUrl}
-                alt={admin.name}
-                width={28}
-                height={28}
-                className="rounded-full border border-sidebar-border shrink-0"
-              />
-            ) : (
-              <div className="h-7 w-7 rounded-full bg-sidebar-accent flex items-center justify-center shrink-0">
-                <User className="h-3.5 w-3.5 text-sidebar-foreground/70" />
-              </div>
-            )}
             <div className="flex-1 min-w-0 text-left">
               <p className="text-xs font-medium text-sidebar-foreground truncate">{admin?.name}</p>
               <p className="text-[10px] text-sidebar-foreground/50 truncate">{admin?.email}</p>

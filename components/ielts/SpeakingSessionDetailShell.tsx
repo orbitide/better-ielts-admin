@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { ContentFormModal } from './ContentFormModal'
 import { SpeakingPartCard } from './SpeakingPartCard'
 import { Breadcrumb } from './Breadcrumb'
-import type { FullSpeakingSession, SpeakingPart, IeltsStatus } from '@/lib/types/ielts'
+import type { FullSpeakingSession, SpeakingPart, IeltsStatus, SetContext } from '@/lib/types/ielts'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
   published: 'success',
@@ -18,9 +18,10 @@ const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = 
 
 type SpeakingSessionDetailShellProps = {
   session: FullSpeakingSession
+  setContext?: SetContext
 }
 
-export function SpeakingSessionDetailShell({ session: initial }: SpeakingSessionDetailShellProps) {
+export function SpeakingSessionDetailShell({ session: initial, setContext }: SpeakingSessionDetailShellProps) {
   const [session, setSession] = useState(initial)
   const [metaModalOpen, setMetaModalOpen] = useState(false)
 
@@ -40,7 +41,15 @@ export function SpeakingSessionDetailShell({ session: initial }: SpeakingSession
   return (
     <>
       <div className="p-5 sm:p-6 space-y-6 max-w-3xl mx-auto">
-        <Breadcrumb items={[{ label: 'Speaking Sessions', href: '/ielts/speaking' }, { label: session.title }]} />
+        <Breadcrumb items={setContext ? [
+          { label: 'Sets', href: '/ielts/mock-tests' },
+          { label: setContext.setTitle, href: `/ielts/mock-tests/${setContext.setId}` },
+          { label: `Test ${setContext.testIndex}`, href: `/ielts/mock-tests/${setContext.setId}/tests/${setContext.testId}` },
+          { label: session.title },
+        ] : [
+          { label: 'Speaking Sessions', href: '/ielts/speaking' },
+          { label: session.title },
+        ]} />
 
         <div className="space-y-3">
           <PageHeader title={session.title} description={`Topic: ${session.topic}`}>

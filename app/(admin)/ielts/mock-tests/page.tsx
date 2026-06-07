@@ -1,23 +1,23 @@
-import { getMockTests } from '@/lib/data/ielts'
+import { getIeltsSets } from '@/lib/data/ielts'
 import { IeltsContentShell } from '@/components/ielts/IeltsContentShell'
 import type { ContentRow } from '@/components/ielts/ContentTable'
 
-export const metadata = { title: 'Mock Tests' }
+export const metadata = { title: 'Sets' }
 
-export default async function MockTestsPage() {
-  const tests = await getMockTests()
-  const rows: ContentRow[] = tests.map((t) => ({
-    id: t.id,
-    title: t.title,
-    meta: `${t.type} · ${t.sectionCount} sections · ${t.durationMinutes} min`,
-    status: t.status,
-    createdAt: t.createdAt,
+export default async function SetsPage() {
+  const sets = await getIeltsSets()
+  const rows: ContentRow[] = sets.map((s) => ({
+    id: s.id,
+    title: s.title,
+    meta: `${s.type} · ${s.testCount} test${s.testCount !== 1 ? 's' : ''} · ${s.difficulty}`,
+    status: s.status,
+    createdAt: s.createdAt,
   }))
 
   return (
     <IeltsContentShell
       title="Sets"
-      description="Manage full test sets — each set groups one Reading, Listening, Writing, and Speaking test."
+      description="Manage test sets — each set groups multiple complete IELTS tests (Test 1, Test 2…)."
       rows={rows}
       typeOptions={['academic', 'general']}
       typeLabel="Exam Type"

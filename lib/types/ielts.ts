@@ -189,3 +189,45 @@ export type FullMockTest = MockTest & {
   difficulty: 'beginner' | 'intermediate' | 'advanced'
   sections: MockTestSection[]
 }
+
+// ─── Set → Test hierarchy types ───────────────────────────────────────────────
+
+// A Set groups multiple complete Tests (e.g. "Cambridge IELTS 17")
+export type IeltsSet = {
+  id: string
+  title: string
+  description: string
+  type: 'academic' | 'general'
+  difficulty: 'beginner' | 'intermediate' | 'advanced'
+  testCount: number
+  status: IeltsStatus
+  createdAt: string
+}
+
+// One complete IELTS test (4 skills) within a Set — e.g. "Test 1"
+export type IeltsTest = {
+  id: string
+  setId: string
+  orderIndex: number      // 1-based position within the Set
+  title: string           // "Test 1", "Test 2"
+  durationMinutes: number
+  sectionCount: number
+  status: IeltsStatus
+  createdAt: string
+}
+
+export type FullIeltsTest = IeltsTest & {
+  sections: MockTestSection[]
+}
+
+export type FullIeltsSet = IeltsSet & {
+  tests: FullIeltsTest[]
+}
+
+// Optional context passed from Test → skill pages for breadcrumb enrichment
+export type SetContext = {
+  setId: string
+  setTitle: string
+  testId: string
+  testIndex: number   // 1-based, e.g. 1 → "Test 1"
+}

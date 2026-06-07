@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation'
-import { getFullMockTest } from '@/lib/data/ielts'
-import { MockTestDetailShell } from '@/components/ielts/MockTestDetailShell'
+import { getFullIeltsSet } from '@/lib/data/ielts'
+import { SetDetailShell } from '@/components/ielts/SetDetailShell'
 
-export default async function MockTestDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const test = await getFullMockTest(id)
-  if (!test) notFound()
-  return <MockTestDetailShell test={test} />
+  const set = await getFullIeltsSet(id)
+  if (!set) notFound()
+  return <SetDetailShell set={set} />
 }

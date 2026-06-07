@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
 import { ListeningQuestionFormModal } from './ListeningQuestionFormModal'
-import type { FullListeningTest, ListeningSection, ListeningQuestion } from '@/lib/types/ielts'
+import type { FullListeningTest, ListeningSection, ListeningQuestion, SetContext } from '@/lib/types/ielts'
 
 const typeLabels: Record<ListeningQuestion['type'], string> = {
   mcq: 'MCQ',
@@ -33,9 +33,10 @@ function formatDuration(seconds: number) {
 type ListeningSectionShellProps = {
   test: FullListeningTest
   section: ListeningSection
+  setContext?: SetContext
 }
 
-export function ListeningSectionShell({ test, section: initialSection }: ListeningSectionShellProps) {
+export function ListeningSectionShell({ test, section: initialSection, setContext }: ListeningSectionShellProps) {
   const [section, setSection] = useState(initialSection)
   const [transcript, setTranscript] = useState(initialSection.transcript)
   const [transcriptDirty, setTranscriptDirty] = useState(false)
@@ -68,7 +69,13 @@ export function ListeningSectionShell({ test, section: initialSection }: Listeni
   return (
     <>
       <div className="p-5 sm:p-6 space-y-6 max-w-3xl mx-auto">
-        <Breadcrumb items={[
+        <Breadcrumb items={setContext ? [
+          { label: 'Sets', href: '/ielts/mock-tests' },
+          { label: setContext.setTitle, href: `/ielts/mock-tests/${setContext.setId}` },
+          { label: `Test ${setContext.testIndex}`, href: `/ielts/mock-tests/${setContext.setId}/tests/${setContext.testId}` },
+          { label: test.title, href: `/ielts/listening/${test.id}?setId=${setContext.setId}&setTitle=${encodeURIComponent(setContext.setTitle)}&testId=${setContext.testId}&testIndex=${setContext.testIndex}` },
+          { label: `Section ${section.sectionNumber}` },
+        ] : [
           { label: 'Listening Tests', href: '/ielts/listening' },
           { label: test.title, href: `/ielts/listening/${test.id}` },
           { label: `Section ${section.sectionNumber}` },
