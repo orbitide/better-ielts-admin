@@ -16,11 +16,12 @@ export default async function MockTestsPage() {
 
   return (
     <IeltsContentShell
-      title="Mock Tests"
-      description="Manage full mock examinations (all 4 skills)."
+      title="Sets"
+      description="Manage full test sets — each set groups one Reading, Listening, Writing, and Speaking test."
       rows={rows}
       typeOptions={['academic', 'general']}
       typeLabel="Exam Type"
+      manageHrefPrefix="/ielts/mock-tests"
     />
   )
 }

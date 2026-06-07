@@ -21,6 +21,7 @@ export default async function SpeakingPage() {
       rows={rows}
       typeOptions={['3-part', '2-part']}
       typeLabel="Format"
+      manageHrefPrefix="/ielts/speaking"
     />
   )
 }

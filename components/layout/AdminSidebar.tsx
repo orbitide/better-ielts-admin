@@ -1,13 +1,17 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import Image from 'next/image'
+import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard, Users, BookMarked, Headphones, PenLine, Mic, ClipboardList, Brain,
+  LayoutDashboard, Users, BookMarked, Headphones, PenLine, Mic, Layers2, Brain,
   FileText, GraduationCap, BarChart2, MessageSquare, CreditCard, ChevronLeft, ChevronRight,
+  LogOut, User, Settings, ChevronUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 import { useUIStore } from '@/lib/store/ui-store'
+import { useAdminAuthStore } from '@/lib/store/auth-store'
 
 const navGroups = [
   {
@@ -25,12 +29,12 @@ const navGroups = [
   {
     label: 'IELTS Content',
     items: [
+      { href: '/ielts/mock-tests', label: 'Sets', icon: Layers2 },
       { href: '/ielts/reading', label: 'Reading', icon: BookMarked },
       { href: '/ielts/listening', label: 'Listening', icon: Headphones },
       { href: '/ielts/writing', label: 'Writing', icon: PenLine },
       { href: '/ielts/speaking', label: 'Speaking', icon: Mic },
       { href: '/ielts/vocabulary', label: 'Vocabulary', icon: Brain },
-      { href: '/ielts/mock-tests', label: 'Mock Tests', icon: ClipboardList },
     ],
   },
   {
@@ -52,7 +56,29 @@ const navGroups = [
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { sidebarCollapsed, toggleSidebar } = useUIStore()
+  const admin = useAdminAuthStore((s) => s.admin)
+  const logout = useAdminAuthStore((s) => s.logout)
+
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleMouseDown(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+    if (profileOpen) document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [profileOpen])
+
+  const handleLogout = () => {
+    setProfileOpen(false)
+    logout()
+    router.replace('/login')
+  }
 
   return (
     <aside
@@ -64,9 +90,12 @@ export function AdminSidebar() {
       {/* Logo */}
       <div className="flex h-14 items-center justify-between px-3 border-b border-sidebar-border shrink-0">
         {!sidebarCollapsed && (
-          <span className="font-semibold text-sm text-sidebar-foreground tracking-tight">
-            Better IELTS <span className="text-primary font-bold">Admin</span>
-          </span>
+          <div className="flex items-center gap-2">
+            <Image src="/logo.svg" alt="Better IELTS" width={28} height={28} />
+            <span className="font-semibold text-sm text-sidebar-foreground tracking-tight">
+              Better IELTS <span className="text-primary font-bold">Admin</span>
+            </span>
+          </div>
         )}
         <button
           onClick={toggleSidebar}
@@ -113,6 +142,87 @@ export function AdminSidebar() {
           </div>
         ))}
       </nav>
+
+      {/* Account / Profile Dropdown */}
+      <div ref={profileRef} className="relative border-t border-sidebar-border shrink-0">
+        {/* Dropdown menu */}
+        {profileOpen && (
+          <div
+            className={cn(
+              'absolute z-30 rounded-xl border border-border bg-card shadow-xl py-1 text-sm',
+              sidebarCollapsed
+                ? 'left-full bottom-0 ml-1 w-44'
+                : 'bottom-full left-0 right-0 mb-1 mx-2'
+            )}
+          >
+            <Link
+              href="/profile"
+              onClick={() => setProfileOpen(false)}
+              className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/60 w-full transition-colors"
+            >
+              <User className="h-3.5 w-3.5 text-muted-foreground" />
+              Profile
+            </Link>
+            <Link
+              href="/settings"
+              onClick={() => setProfileOpen(false)}
+              className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/60 w-full transition-colors"
+            >
+              <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+              Settings
+            </Link>
+            <div className="my-1 border-t border-border" />
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 w-full text-left transition-colors text-red-600"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Logout
+            </button>
+          </div>
+        )}
+
+        {sidebarCollapsed ? (
+          <div className="flex justify-center py-3">
+            <button
+              onClick={() => setProfileOpen((v) => !v)}
+              title="Account menu"
+              className="rounded-md p-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+            >
+              <User className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setProfileOpen((v) => !v)}
+            className="flex items-center gap-2.5 px-3 py-3 w-full hover:bg-sidebar-accent/60 transition-colors"
+          >
+            {admin?.avatarUrl ? (
+              <Image
+                src={admin.avatarUrl}
+                alt={admin.name}
+                width={28}
+                height={28}
+                className="rounded-full border border-sidebar-border shrink-0"
+              />
+            ) : (
+              <div className="h-7 w-7 rounded-full bg-sidebar-accent flex items-center justify-center shrink-0">
+                <User className="h-3.5 w-3.5 text-sidebar-foreground/70" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs font-medium text-sidebar-foreground truncate">{admin?.name}</p>
+              <p className="text-[10px] text-sidebar-foreground/50 truncate">{admin?.email}</p>
+            </div>
+            <ChevronUp
+              className={cn(
+                'h-3.5 w-3.5 text-sidebar-foreground/40 shrink-0 transition-transform duration-200',
+                !profileOpen && 'rotate-180'
+              )}
+            />
+          </button>
+        )}
+      </div>
     </aside>
   )
 }

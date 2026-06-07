@@ -21,6 +21,7 @@ export default async function WritingPage() {
       rows={rows}
       typeOptions={['task1', 'task2']}
       typeLabel="Task Type"
+      manageHrefPrefix="/ielts/writing"
     />
   )
 }

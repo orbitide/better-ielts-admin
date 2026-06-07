@@ -21,6 +21,7 @@ export default async function ListeningPage() {
       rows={rows}
       typeOptions={['standard']}
       typeLabel="Type"
+      manageHrefPrefix="/ielts/listening"
     />
   )
 }

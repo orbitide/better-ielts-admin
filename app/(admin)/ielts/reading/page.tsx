@@ -21,6 +21,7 @@ export default async function ReadingPage() {
       rows={rows}
       typeOptions={['academic', 'general']}
       typeLabel="Test Type"
+      manageHrefPrefix="/ielts/reading"
     />
   )
 }

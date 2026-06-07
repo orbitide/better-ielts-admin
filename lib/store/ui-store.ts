@@ -7,6 +7,8 @@ type UIState = {
   sidebarCollapsed: boolean
   toggleSidebar: () => void
   setSidebarCollapsed: (v: boolean) => void
+  theme: 'light' | 'dark'
+  toggleTheme: () => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -15,6 +17,8 @@ export const useUIStore = create<UIState>()(
       sidebarCollapsed: false,
       toggleSidebar: () => set({ sidebarCollapsed: !get().sidebarCollapsed }),
       setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
+      theme: 'light',
+      toggleTheme: () => set({ theme: get().theme === 'light' ? 'dark' : 'light' }),
     }),
     { name: 'admin-ui' }
   )

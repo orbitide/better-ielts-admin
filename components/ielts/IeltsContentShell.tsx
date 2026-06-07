@@ -11,9 +11,10 @@ type IeltsContentShellProps = {
   rows: ContentRow[]
   typeOptions?: string[]
   typeLabel?: string
+  manageHrefPrefix?: string
 }
 
-export function IeltsContentShell({ title, description, rows: initialRows, typeOptions, typeLabel }: IeltsContentShellProps) {
+export function IeltsContentShell({ title, description, rows: initialRows, typeOptions, typeLabel, manageHrefPrefix }: IeltsContentShellProps) {
   const [rows, setRows] = useState(initialRows)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<ContentRow | null>(null)
@@ -53,6 +54,7 @@ export function IeltsContentShell({ title, description, rows: initialRows, typeO
         initialRows={rows}
         onNew={handleNew}
         onEdit={handleEdit}
+        manageHrefPrefix={manageHrefPrefix}
       />
       <ContentFormModal
         open={modalOpen}

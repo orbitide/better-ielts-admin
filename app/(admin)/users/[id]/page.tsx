@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation'
 import { getUserById } from '@/lib/data/users'
-import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowLeft, Target, Clock, BookMarked } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { UserAvatar } from '@/components/users/UserAvatar'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -38,13 +38,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
       <Card>
         <CardContent className="p-5">
           <div className="flex items-center gap-4">
-            <Image
-              src={user.avatarUrl}
-              alt={user.name}
-              width={56}
-              height={56}
-              className="rounded-full border border-border"
-            />
+            <UserAvatar name={user.name} size="md" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-semibold">{user.name}</h1>
