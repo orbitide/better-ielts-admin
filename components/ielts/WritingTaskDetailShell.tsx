@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
+import { ImagePickerField } from '@/components/media/ImagePickerField'
 import type { FullWritingTask, IeltsStatus, SetContext } from '@/lib/types/ielts'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
@@ -109,14 +110,12 @@ export function WritingTaskDetailShell({ task: initial, setContext }: WritingTas
           </div>
 
           {task.type === 'task1' && (
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Image URL</label>
-              <Input
-                value={task.imageUrl ?? ''}
-                onChange={(e) => update('imageUrl', e.target.value || undefined)}
-                placeholder="/images/writing/chart.png"
-              />
-            </div>
+            <ImagePickerField
+              label="Task Image"
+              value={task.imageUrl}
+              onChange={(url) => update('imageUrl', url)}
+              folder="writing"
+            />
           )}
 
           <div className="space-y-1.5">

@@ -10,6 +10,7 @@ export type BlogPost = {
   updatedAt: string
   excerpt: string
   content: string
+  coverImageUrl?: string
 }
 
 export type BlogCategory = {

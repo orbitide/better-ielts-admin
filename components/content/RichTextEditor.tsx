@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { MediaLibraryModal } from '@/components/media/MediaLibraryModal'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import { NodeSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
@@ -229,8 +230,7 @@ type RichTextEditorProps = {
 const SEP = <div className="w-px h-4 bg-border mx-0.5 shrink-0" />
 
 export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
-  const [imageBarOpen, setImageBarOpen] = useState(false)
-  const [imageUrl, setImageUrl] = useState('')
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
   const [linkBarOpen, setLinkBarOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
 
@@ -254,20 +254,11 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
 
   if (!editor) return null
 
-  /* Image insert helpers */
-  const openImageBar = () => { setImageUrl(''); setImageBarOpen(true); setLinkBarOpen(false) }
-  const closeImageBar = () => { setImageBarOpen(false); setImageUrl('') }
-  const insertImage = () => {
-    if (!imageUrl.trim()) return
-    editor.chain().focus().setImage({ src: imageUrl.trim() }).run()
-    closeImageBar()
-  }
-
   /* Link helpers */
   const openLinkBar = () => {
     setLinkUrl(editor.getAttributes('link').href ?? '')
     setLinkBarOpen(true)
-    setImageBarOpen(false)
+    setMediaLibraryOpen(false)
   }
   const closeLinkBar = () => { setLinkBarOpen(false); setLinkUrl('') }
   const applyLink = () => {
@@ -346,7 +337,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         <TB onClick={handleLinkButton} active={editor.isActive('link') || linkBarOpen} title={editor.isActive('link') ? 'Remove link' : 'Add link'}>
           <LinkIcon className="h-3.5 w-3.5" />
         </TB>
-        <TB onClick={imageBarOpen ? closeImageBar : openImageBar} active={imageBarOpen} title="Insert image">
+        <TB onClick={() => setMediaLibraryOpen(true)} active={mediaLibraryOpen} title="Insert image">
           <ImageIcon className="h-3.5 w-3.5" />
         </TB>
         <TB
@@ -367,27 +358,16 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         </TB>
       </div>
 
-      {/* ── Image URL insert bar ──────────────────────────────────────── */}
-      {imageBarOpen && (
-        <div className="flex items-center gap-2 border-b border-input bg-muted/20 px-3 py-2">
-          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <input
-            autoFocus
-            type="url"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="Paste image URL (https://…)"
-            className="flex-1 text-sm rounded border border-input bg-background px-2 py-1 focus:outline-none focus:ring-1 focus:ring-ring"
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); insertImage() } if (e.key === 'Escape') closeImageBar() }}
-          />
-          <button type="button" onClick={insertImage} className="flex items-center gap-1 rounded px-2 py-1 text-xs bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-            <Check className="h-3 w-3" /> Insert
-          </button>
-          <button type="button" onClick={closeImageBar} className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
+      {/* ── Media library modal for image insertion ──────────────────── */}
+      <MediaLibraryModal
+        open={mediaLibraryOpen}
+        onClose={() => setMediaLibraryOpen(false)}
+        onSelect={(url) => {
+          editor.chain().focus().setImage({ src: url }).run()
+          setMediaLibraryOpen(false)
+        }}
+        folder="inline"
+      />
 
       {/* ── Link URL bar ──────────────────────────────────────────────── */}
       {linkBarOpen && (

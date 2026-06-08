@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/Select'
 import { Card, CardContent } from '@/components/ui/Card'
 import { RichTextEditor } from '@/components/content/RichTextEditor'
 import { TagInput } from '@/components/content/TagInput'
+import { ImagePickerField } from '@/components/media/ImagePickerField'
 import type { BlogPost, BlogCategory } from '@/lib/types/content'
 
 type BlogPostFormProps = {
@@ -27,6 +28,7 @@ export function BlogPostForm({ initialData, formTitle, categories }: BlogPostFor
   const [excerpt, setExcerpt] = useState(initialData?.excerpt ?? '')
   const [tags, setTags] = useState<string[]>(initialData?.tags ?? [])
   const [content, setContent] = useState(initialData?.content ?? '')
+  const [coverImageUrl, setCoverImageUrl] = useState<string | undefined>(initialData?.coverImageUrl)
   const [saved, setSaved] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -112,6 +114,13 @@ export function BlogPostForm({ initialData, formTitle, categories }: BlogPostFor
               <TagInput value={tags} onChange={setTags} placeholder="Type tag and press Enter or comma…" />
               <p className="text-xs text-muted-foreground">Press Enter or , to add a tag. Backspace removes the last tag.</p>
             </div>
+
+            <ImagePickerField
+              label="Cover Image"
+              value={coverImageUrl}
+              onChange={setCoverImageUrl}
+              folder="blog"
+            />
           </CardContent>
         </Card>
 
