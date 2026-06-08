@@ -14,9 +14,14 @@ export default function LoginPage() {
         <Suspense>
           <LoginForm />
         </Suspense>
-        <p className="text-xs text-muted-foreground text-center">
-          Use <span className="font-mono text-foreground">admin@betterielts.com</span> / <span className="font-mono text-foreground">admin123</span>
-        </p>
+        <div className="space-y-1.5 border-t border-border pt-4">
+          <p className="text-xs font-medium text-muted-foreground text-center mb-2">Test accounts</p>
+          <div className="space-y-1 text-xs text-muted-foreground">
+            <p><span className="font-mono text-foreground">superadmin@betterielts.com</span> / <span className="font-mono text-foreground">super123</span> — Super Admin</p>
+            <p><span className="font-mono text-foreground">content@betterielts.com</span> / <span className="font-mono text-foreground">content123</span> — Content Manager</p>
+            <p><span className="font-mono text-foreground">mod@betterielts.com</span> / <span className="font-mono text-foreground">mod123</span> — Moderator</p>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -6,8 +6,10 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
+import { Modal } from '@/components/ui/Modal'
 import { ListeningQuestionFormModal } from './ListeningQuestionFormModal'
 import type { FullListeningTest, ListeningSection, ListeningQuestion, SetContext } from '@/lib/types/ielts'
+import { RoleGate } from '@/components/auth/RoleGate'
 
 const typeLabels: Record<ListeningQuestion['type'], string> = {
   mcq: 'MCQ',
@@ -42,6 +44,7 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
   const [transcriptDirty, setTranscriptDirty] = useState(false)
   const [questionModalOpen, setQuestionModalOpen] = useState(false)
   const [editingQuestion, setEditingQuestion] = useState<ListeningQuestion | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ListeningQuestion | null>(null)
 
   const handleTranscriptSave = () => {
     setSection((prev) => ({ ...prev, transcript }))
@@ -60,8 +63,10 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
     })
   }
 
-  const handleDeleteQuestion = (id: string) => {
-    setSection((prev) => ({ ...prev, questions: prev.questions.filter((q) => q.id !== id) }))
+  const handleDeleteQuestion = () => {
+    if (!deleteTarget) return
+    setSection((prev) => ({ ...prev, questions: prev.questions.filter((q) => q.id !== deleteTarget.id) }))
+    setDeleteTarget(null)
   }
 
   const sortedQuestions = [...section.questions].sort((a, b) => a.questionNumber - b.questionNumber)
@@ -123,10 +128,12 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Questions ({sortedQuestions.length})
             </h2>
-            <Button size="sm" onClick={() => { setEditingQuestion(null); setQuestionModalOpen(true) }}>
-              <Plus className="h-3.5 w-3.5" />
-              Add Question
-            </Button>
+            <RoleGate permission="ielts:edit">
+              <Button size="sm" onClick={() => { setEditingQuestion(null); setQuestionModalOpen(true) }}>
+                <Plus className="h-3.5 w-3.5" />
+                Add Question
+              </Button>
+            </RoleGate>
           </div>
 
           {sortedQuestions.length === 0 ? (
@@ -159,12 +166,16 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
                       <td className="px-4 py-3 text-muted-foreground text-xs hidden md:table-cell font-mono">{q.correctAnswer}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 justify-end">
-                          <button onClick={() => { setEditingQuestion(q); setQuestionModalOpen(true) }} className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button onClick={() => handleDeleteQuestion(q.id)} className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          <RoleGate permission="ielts:edit">
+                            <button onClick={() => { setEditingQuestion(q); setQuestionModalOpen(true) }} className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          </RoleGate>
+                          <RoleGate permission="ielts:delete">
+                            <button onClick={() => setDeleteTarget(q)} className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </RoleGate>
                         </div>
                       </td>
                     </tr>
@@ -175,6 +186,16 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
           )}
         </div>
       </div>
+
+      <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title="Delete Question">
+        <p className="text-sm text-muted-foreground mb-6">
+          Are you sure you want to delete question <span className="font-semibold text-foreground">#{deleteTarget?.questionNumber}</span>? This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button variant="destructive" size="sm" onClick={handleDeleteQuestion}>Delete</Button>
+        </div>
+      </Modal>
 
       <ListeningQuestionFormModal
         open={questionModalOpen}

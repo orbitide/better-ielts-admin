@@ -7,13 +7,17 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, BookMarked, Headphones, PenLine, Mic, Layers2, Brain,
   FileText, GraduationCap, BarChart2, MessageSquare, CreditCard, ChevronLeft, ChevronRight,
-  LogOut, User, Settings, ChevronUp,
+  LogOut, User, Settings, ChevronUp, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 import { useUIStore } from '@/lib/store/ui-store'
 import { useAdminAuthStore } from '@/lib/store/auth-store'
+import { hasPermission, type Permission } from '@/lib/auth/permissions'
 
-const navGroups = [
+type NavItem = { href: string; label: string; icon: React.ElementType }
+type NavGroup = { label: string; permission?: Permission; items: NavItem[] }
+
+const navGroups: NavGroup[] = [
   {
     label: 'Overview',
     items: [
@@ -22,12 +26,14 @@ const navGroups = [
   },
   {
     label: 'Users',
+    permission: 'users:view',
     items: [
       { href: '/users', label: 'Users', icon: Users },
     ],
   },
   {
     label: 'IELTS Content',
+    permission: 'ielts:view',
     items: [
       { href: '/ielts/mock-tests', label: 'Sets', icon: Layers2 },
       { href: '/ielts/reading', label: 'Reading', icon: BookMarked },
@@ -39,6 +45,7 @@ const navGroups = [
   },
   {
     label: 'Platform Content',
+    permission: 'content:view',
     items: [
       { href: '/content/blog', label: 'Blog', icon: FileText },
       { href: '/content/exam-guide', label: 'Exam Guide', icon: GraduationCap },
@@ -47,6 +54,7 @@ const navGroups = [
   },
   {
     label: 'Engage',
+    permission: 'community:view',
     items: [
       { href: '/community', label: 'Community', icon: MessageSquare },
       { href: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
@@ -74,11 +82,15 @@ export function AdminSidebar() {
     return () => document.removeEventListener('mousedown', handleMouseDown)
   }, [profileOpen])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setProfileOpen(false)
-    logout()
+    await logout()
     router.replace('/login')
   }
+
+  const visibleGroups = navGroups.filter(
+    (g) => !g.permission || (admin && hasPermission(admin.role, g.permission))
+  )
 
   return (
     <aside
@@ -110,7 +122,7 @@ export function AdminSidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0">
-        {navGroups.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.label} className="mb-1">
             {!sidebarCollapsed && (
               <p className="px-2 pt-3 pb-1 text-[10px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest">
@@ -171,6 +183,16 @@ export function AdminSidebar() {
               <Settings className="h-3.5 w-3.5 text-muted-foreground" />
               Settings
             </Link>
+            {admin?.role === 'super_admin' && (
+              <Link
+                href="/settings/admins"
+                onClick={() => setProfileOpen(false)}
+                className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/60 w-full transition-colors"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                Admin Management
+              </Link>
+            )}
             <div className="my-1 border-t border-border" />
             <button
               onClick={handleLogout}

@@ -6,10 +6,12 @@ import { Plus, Pencil, Trash2, Settings2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Modal } from '@/components/ui/Modal'
 import { ContentFormModal } from './ContentFormModal'
 import { ListeningSectionFormModal } from './ListeningSectionFormModal'
 import { Breadcrumb } from './Breadcrumb'
 import type { FullListeningTest, ListeningSection, IeltsStatus, SetContext } from '@/lib/types/ielts'
+import { RoleGate } from '@/components/auth/RoleGate'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
   published: 'success',
@@ -37,6 +39,7 @@ export function ListeningTestDetailShell({ test: initial, setContext }: Listenin
   const [metaModalOpen, setMetaModalOpen] = useState(false)
   const [sectionModalOpen, setSectionModalOpen] = useState(false)
   const [editingSection, setEditingSection] = useState<ListeningSection | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ListeningSection | null>(null)
 
   const handleMetaSave = ({ title, status }: { title: string; type: string; status: IeltsStatus }) => {
     setTest((prev) => ({ ...prev, title, status }))
@@ -70,8 +73,10 @@ export function ListeningTestDetailShell({ test: initial, setContext }: Listenin
     }
   }
 
-  const handleDeleteSection = (id: string) => {
-    setTest((prev) => ({ ...prev, sections: prev.sections.filter((s) => s.id !== id) }))
+  const handleDeleteSection = () => {
+    if (!deleteTarget) return
+    setTest((prev) => ({ ...prev, sections: prev.sections.filter((s) => s.id !== deleteTarget.id) }))
+    setDeleteTarget(null)
   }
 
   const sortedSections = [...test.sections].sort((a, b) => a.sectionNumber - b.sectionNumber)
@@ -91,14 +96,16 @@ export function ListeningTestDetailShell({ test: initial, setContext }: Listenin
 
         <div className="space-y-3">
           <PageHeader title={test.title} description={`${test.durationMinutes} min · ${test.sections.length} sections`}>
-            <Button size="sm" variant="ghost" onClick={() => setMetaModalOpen(true)}>
-              <Pencil className="h-3.5 w-3.5" />
-              Edit
-            </Button>
-            <Button size="sm" onClick={() => { setEditingSection(null); setSectionModalOpen(true) }}>
-              <Plus className="h-3.5 w-3.5" />
-              Add Section
-            </Button>
+            <RoleGate permission="ielts:edit">
+              <Button size="sm" variant="ghost" onClick={() => setMetaModalOpen(true)}>
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </Button>
+              <Button size="sm" onClick={() => { setEditingSection(null); setSectionModalOpen(true) }}>
+                <Plus className="h-3.5 w-3.5" />
+                Add Section
+              </Button>
+            </RoleGate>
           </PageHeader>
           <div className="flex items-center gap-2">
             <Badge variant={statusVariant[test.status]}>{test.status}</Badge>
@@ -135,26 +142,40 @@ export function ListeningTestDetailShell({ test: initial, setContext }: Listenin
                   >
                     <Settings2 className="h-3.5 w-3.5" />
                   </Link>
-                  <button
-                    onClick={() => { setEditingSection(section); setSectionModalOpen(true) }}
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                    title="Edit section"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteSection(section.id)}
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <RoleGate permission="ielts:edit">
+                    <button
+                      onClick={() => { setEditingSection(section); setSectionModalOpen(true) }}
+                      className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                      title="Edit section"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </RoleGate>
+                  <RoleGate permission="ielts:delete">
+                    <button
+                      onClick={() => setDeleteTarget(section)}
+                      className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </RoleGate>
                 </div>
               </div>
             ))
           )}
         </div>
       </div>
+
+      <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title="Delete Section">
+        <p className="text-sm text-muted-foreground mb-6">
+          Are you sure you want to delete <span className="font-semibold text-foreground">Section {deleteTarget?.sectionNumber}</span>? All questions in this section will also be removed.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button variant="destructive" size="sm" onClick={handleDeleteSection}>Delete</Button>
+        </div>
+      </Modal>
 
       <ContentFormModal
         open={metaModalOpen}

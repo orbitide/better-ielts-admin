@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { X, Plus, Pencil } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
-import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { SpeakingPartFormModal } from './SpeakingPartFormModal'
 import type { SpeakingPart } from '@/lib/types/ielts'
+import { RoleGate } from '@/components/auth/RoleGate'
 
 type SpeakingPartCardProps = {
   part: SpeakingPart
@@ -17,6 +19,7 @@ export function SpeakingPartCard({ part: initial, onUpdate }: SpeakingPartCardPr
   const [part, setPart] = useState(initial)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [newQuestion, setNewQuestion] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
 
   const handlePartSave = (data: { topic: string; speakingMinutes: number; cueCardPrompt?: string; preparationSeconds?: number }) => {
     const updated = { ...part, ...data }
@@ -33,10 +36,12 @@ export function SpeakingPartCard({ part: initial, onUpdate }: SpeakingPartCardPr
     setNewQuestion('')
   }
 
-  const handleDeleteQuestion = (idx: number) => {
-    const updated = { ...part, questions: part.questions.filter((_, i) => i !== idx) }
+  const handleDeleteQuestion = () => {
+    if (deleteTarget === null) return
+    const updated = { ...part, questions: part.questions.filter((_, i) => i !== deleteTarget) }
     setPart(updated)
     onUpdate(updated)
+    setDeleteTarget(null)
   }
 
   const partColors = ['bg-blue-50 border-blue-200 dark:bg-blue-950/20', 'bg-amber-50 border-amber-200 dark:bg-amber-950/20', 'bg-green-50 border-green-200 dark:bg-green-950/20']
@@ -56,13 +61,15 @@ export function SpeakingPartCard({ part: initial, onUpdate }: SpeakingPartCardPr
               {part.preparationSeconds && ` · ${part.preparationSeconds}s prep`}
             </p>
           </div>
-          <button
-            onClick={() => setEditModalOpen(true)}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shrink-0"
-            title="Edit part"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
+          <RoleGate permission="ielts:edit">
+            <button
+              onClick={() => setEditModalOpen(true)}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shrink-0"
+              title="Edit part"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          </RoleGate>
         </div>
 
         {part.part === 2 && part.cueCardPrompt && (
@@ -81,30 +88,44 @@ export function SpeakingPartCard({ part: initial, onUpdate }: SpeakingPartCardPr
               <li key={i} className="flex items-start gap-2 group">
                 <span className="text-xs text-muted-foreground mt-0.5 shrink-0">{i + 1}.</span>
                 <span className="text-sm flex-1 leading-snug">{q}</span>
-                <button
-                  onClick={() => handleDeleteQuestion(i)}
-                  className="text-muted-foreground hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                <RoleGate permission="ielts:delete">
+                  <button
+                    onClick={() => setDeleteTarget(i)}
+                    className="text-muted-foreground hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </RoleGate>
               </li>
             ))}
           </ul>
 
-          <div className="flex items-center gap-2 pt-1">
-            <Input
-              value={newQuestion}
-              onChange={(e) => setNewQuestion(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddQuestion() } }}
-              placeholder="Type a question and press Enter…"
-              className="text-sm"
-            />
-            <Button type="button" size="sm" variant="ghost" onClick={handleAddQuestion}>
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+          <RoleGate permission="ielts:edit">
+            <div className="flex items-center gap-2 pt-1">
+              <Input
+                value={newQuestion}
+                onChange={(e) => setNewQuestion(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddQuestion() } }}
+                placeholder="Type a question and press Enter…"
+                className="text-sm"
+              />
+              <Button type="button" size="sm" variant="ghost" onClick={handleAddQuestion}>
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </RoleGate>
         </div>
       </div>
+
+      <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title="Delete Question">
+        <p className="text-sm text-muted-foreground mb-6">
+          Are you sure you want to delete this question? This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button variant="destructive" size="sm" onClick={handleDeleteQuestion}>Delete</Button>
+        </div>
+      </Modal>
 
       <SpeakingPartFormModal
         open={editModalOpen}

@@ -9,11 +9,13 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
 import type { ExamGuideSection } from '@/lib/types/content'
+import { RoleGate } from '@/components/auth/RoleGate'
 
 export function ExamGuideShell({ initialSections }: { initialSections: ExamGuideSection[] }) {
   const [sections, setSections] = useState(initialSections)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<ExamGuideSection | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ExamGuideSection | null>(null)
   const [title, setTitle] = useState('')
   const [skill, setSkill] = useState<ExamGuideSection['skill']>('general')
   const [status, setStatus] = useState<'published' | 'draft'>('draft')
@@ -34,7 +36,11 @@ export function ExamGuideShell({ initialSections }: { initialSections: ExamGuide
     setModalOpen(true)
   }
 
-  const handleDelete = (id: string) => setSections((prev) => prev.filter((s) => s.id !== id))
+  const handleDelete = () => {
+    if (!deleteTarget) return
+    setSections((prev) => prev.filter((s) => s.id !== deleteTarget.id))
+    setDeleteTarget(null)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,7 +68,9 @@ export function ExamGuideShell({ initialSections }: { initialSections: ExamGuide
     <>
       <div className="space-y-5">
         <PageHeader title="Exam Guide" description="Manage the IELTS exam guide sections shown to students.">
-          <Button onClick={openNew} size="sm"><Plus className="h-3.5 w-3.5" />New Section</Button>
+          <RoleGate permission="content:edit">
+            <Button onClick={openNew} size="sm"><Plus className="h-3.5 w-3.5" />New Section</Button>
+          </RoleGate>
         </PageHeader>
 
         <div className="rounded-xl border border-border overflow-hidden">
@@ -89,12 +97,16 @@ export function ExamGuideShell({ initialSections }: { initialSections: ExamGuide
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{s.updatedAt}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
-                      <button onClick={() => openEdit(s)} className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button onClick={() => handleDelete(s.id)} className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <RoleGate permission="content:edit">
+                        <button onClick={() => openEdit(s)} className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </RoleGate>
+                      <RoleGate permission="content:delete">
+                        <button onClick={() => setDeleteTarget(s)} className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </RoleGate>
                     </div>
                   </td>
                 </tr>
@@ -103,6 +115,16 @@ export function ExamGuideShell({ initialSections }: { initialSections: ExamGuide
           </table>
         </div>
       </div>
+
+      <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title="Delete Section">
+        <p className="text-sm text-muted-foreground mb-6">
+          Are you sure you want to delete <span className="font-semibold text-foreground">{deleteTarget?.title}</span>? This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button type="button" variant="destructive" size="sm" onClick={handleDelete}>Delete</Button>
+        </div>
+      </Modal>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Section' : 'New Section'}>
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -6,6 +6,24 @@ export type AdminUser = {
   role: 'super_admin' | 'content_manager' | 'moderator'
 }
 
+export type Permission =
+  | 'users:view' | 'users:edit' | 'users:delete' | 'users:ban'
+  | 'ielts:view' | 'ielts:edit' | 'ielts:delete'
+  | 'content:view' | 'content:edit' | 'content:publish' | 'content:delete'
+  | 'community:view' | 'community:moderate' | 'community:delete'
+  | 'subscriptions:view'
+  | 'admins:manage'
+
+export type AuditLogEntry = {
+  id: string
+  adminId: string
+  adminName: string
+  action: string
+  timestamp: string
+}
+
+export type ManagedAdmin = AdminUser & { status: 'active' | 'disabled' }
+
 export type DashboardStats = {
   totalUsers: number
   userGrowthPercent: number

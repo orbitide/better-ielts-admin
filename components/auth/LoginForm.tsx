@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 
 export function LoginForm() {
-  const [email, setEmail] = useState('admin@betterielts.com')
-  const [password, setPassword] = useState('admin123')
+  const [email, setEmail] = useState('superadmin@betterielts.com')
+  const [password, setPassword] = useState('super123')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -20,8 +20,7 @@ export function LoginForm() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 400))
-    const ok = login(email, password)
+    const ok = await login(email, password)
     if (ok) {
       const redirect = searchParams.get('redirect') ?? '/dashboard'
       router.replace(redirect)

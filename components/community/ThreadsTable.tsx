@@ -3,13 +3,17 @@
 import { useState } from 'react'
 import { Flag, Trash2, CheckCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Modal } from '@/components/ui/Modal'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { PageHeader } from '@/components/ui/PageHeader'
 import type { CommunityThread } from '@/lib/mock/community-threads'
+import { RoleGate } from '@/components/auth/RoleGate'
 
 export function ThreadsTable({ initialThreads }: { initialThreads: CommunityThread[] }) {
   const [threads, setThreads] = useState(initialThreads)
   const [query, setQuery] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<CommunityThread | null>(null)
 
   const filtered = threads.filter(
     (t) =>
@@ -23,8 +27,10 @@ export function ThreadsTable({ initialThreads }: { initialThreads: CommunityThre
     )
   }
 
-  const handleDelete = (id: string) => {
-    setThreads((prev) => prev.filter((t) => t.id !== id))
+  const handleDelete = () => {
+    if (!deleteTarget) return
+    setThreads((prev) => prev.filter((t) => t.id !== deleteTarget.id))
+    setDeleteTarget(null)
   }
 
   return (
@@ -78,23 +84,27 @@ export function ThreadsTable({ initialThreads }: { initialThreads: CommunityThre
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
-                      <button
-                        onClick={() => handleToggleFlag(thread.id)}
-                        title={thread.flagged ? 'Unflag' : 'Flag'}
-                        className={`rounded-md p-1.5 transition-colors ${
-                          thread.flagged
-                            ? 'text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
-                            : 'text-muted-foreground hover:bg-amber-100 hover:text-amber-600 dark:hover:bg-amber-900/30'
-                        }`}
-                      >
-                        {thread.flagged ? <CheckCircle className="h-3.5 w-3.5" /> : <Flag className="h-3.5 w-3.5" />}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(thread.id)}
-                        className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <RoleGate permission="community:moderate">
+                        <button
+                          onClick={() => handleToggleFlag(thread.id)}
+                          title={thread.flagged ? 'Unflag' : 'Flag'}
+                          className={`rounded-md p-1.5 transition-colors ${
+                            thread.flagged
+                              ? 'text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
+                              : 'text-muted-foreground hover:bg-amber-100 hover:text-amber-600 dark:hover:bg-amber-900/30'
+                          }`}
+                        >
+                          {thread.flagged ? <CheckCircle className="h-3.5 w-3.5" /> : <Flag className="h-3.5 w-3.5" />}
+                        </button>
+                      </RoleGate>
+                      <RoleGate permission="community:delete">
+                        <button
+                          onClick={() => setDeleteTarget(thread)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </RoleGate>
                     </div>
                   </td>
                 </tr>
@@ -105,6 +115,16 @@ export function ThreadsTable({ initialThreads }: { initialThreads: CommunityThre
       </div>
 
       <p className="text-xs text-muted-foreground">{filtered.length} of {threads.length} threads</p>
+
+      <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title="Delete Thread">
+        <p className="text-sm text-muted-foreground mb-6">
+          Are you sure you want to delete <span className="font-semibold text-foreground">{deleteTarget?.title}</span>? This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button variant="destructive" size="sm" onClick={handleDelete}>Delete</Button>
+        </div>
+      </Modal>
     </div>
   )
 }
