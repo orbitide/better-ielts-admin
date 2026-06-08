@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import type { FullMockTest, IeltsStatus } from '@/lib/types/ielts'
+import { MockTestSchema } from '@/lib/validations/ielts'
+import { fieldErrors } from '@/lib/validations/utils'
 
 type MockTestFormData = {
   title: string
@@ -31,6 +33,7 @@ export function MockTestFormModal({ open, onClose, editing, onSave }: MockTestFo
   const [type, setType] = useState<'academic' | 'general'>('academic')
   const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate')
   const [status, setStatus] = useState<IeltsStatus>('draft')
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (editing) {
@@ -46,10 +49,19 @@ export function MockTestFormModal({ open, onClose, editing, onSave }: MockTestFo
       setDifficulty('intermediate')
       setStatus('draft')
     }
+    setErrors({})
   }, [editing, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    const result = MockTestSchema.safeParse({ title, description, type, difficulty, status })
+    if (!result.success) {
+      setErrors(fieldErrors(result.error))
+      return
+    }
+    setErrors({})
+
     onSave({ title, description, type, difficulty, status })
     onClose()
   }
@@ -59,7 +71,8 @@ export function MockTestFormModal({ open, onClose, editing, onSave }: MockTestFo
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Title</label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Full Mock Test 1 — Academic" required />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Full Mock Test 1 — Academic" />
+          {errors.title && <p className="text-xs text-destructive mt-1">{errors.title}</p>}
         </div>
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Description</label>

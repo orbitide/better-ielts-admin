@@ -13,6 +13,11 @@ export const mockBlogPosts: BlogPost[] = [
     updatedAt: '2025-09-10',
     coverImageUrl: 'https://placehold.co/1200x480/1e3a5f/ffffff?text=10+Strategies+to+Boost+Your+IELTS+Band',
     excerpt: 'Discover the most effective strategies that have helped thousands of students achieve their target band score.',
+    seo: {
+      metaTitle: '10 Proven IELTS Strategies for Band 7+ in 2025',
+      metaDescription: 'Struggling to hit your target IELTS band? These 10 examiner-approved strategies cover all four skills and will help you score higher on test day.',
+      focusKeyword: 'IELTS strategies band score',
+    },
     content: `<img src="https://placehold.co/1200x480/1e3a5f/ffffff?text=10+Strategies+to+Boost+Your+IELTS+Band" alt="IELTS Study Strategies" data-width="100%" data-align="center" style="width: 100%; max-width: 100%; display: block; margin-left: auto; margin-right: auto;" />
 
 <h2>Why Strategy Matters as Much as Skill</h2>
@@ -171,6 +176,11 @@ export const mockBlogPosts: BlogPost[] = [
     updatedAt: '2025-10-01',
     coverImageUrl: 'https://placehold.co/1200x480/0f4c75/ffffff?text=IELTS+Writing+Task+2+Complete+Guide',
     excerpt: 'Master the essay structure, vocabulary, and argumentation techniques needed for a Band 7+ writing score.',
+    seo: {
+      metaTitle: 'IELTS Writing Task 2: Complete Band 7 Essay Guide',
+      metaDescription: 'Master essay structure, academic vocabulary, and grammar for IELTS Writing Task 2. Includes the exact 40-minute timing plan used by Band 7+ candidates.',
+      focusKeyword: 'IELTS Writing Task 2 guide',
+    },
     content: `<img src="https://placehold.co/1200x480/0f4c75/ffffff?text=IELTS+Writing+Task+2+%E2%80%94+Complete+Guide" alt="Writing Task 2 Guide" data-width="100%" data-align="center" style="width: 100%; max-width: 100%; display: block; margin-left: auto; margin-right: auto;" />
 
 <h2>What Is Writing Task 2?</h2>
@@ -622,6 +632,12 @@ export const mockBlogPosts: BlogPost[] = [
     updatedAt: '2025-12-03',
     coverImageUrl: 'https://placehold.co/1200x480/1e3a5f/ffffff?text=IELTS+vs+TOEFL+%E2%80%94+Complete+Comparison+2025',
     excerpt: 'A comprehensive comparison of IELTS and TOEFL to help you decide which test suits your goals.',
+    seo: {
+      metaTitle: 'IELTS vs TOEFL 2025: Which Test Should You Take?',
+      metaDescription: 'Detailed comparison of IELTS and TOEFL covering format, score equivalence, country acceptance, and a decision framework to help you choose.',
+      focusKeyword: 'IELTS vs TOEFL comparison',
+      ogImage: 'https://placehold.co/1200x630/1e3a5f/ffffff?text=IELTS+vs+TOEFL+2025',
+    },
     content: `<img src="https://placehold.co/1200x480/1e3a5f/ffffff?text=IELTS+vs+TOEFL+%E2%80%94+Which+Test+Is+Right+for+You%3F" alt="IELTS vs TOEFL" data-width="100%" data-align="center" style="width: 100%; max-width: 100%; display: block; margin-left: auto; margin-right: auto;" />
 
 <h2>The Short Answer</h2>

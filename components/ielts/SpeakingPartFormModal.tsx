@@ -5,6 +5,8 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import type { SpeakingPart } from '@/lib/types/ielts'
+import { SpeakingPartSchema } from '@/lib/validations/ielts'
+import { fieldErrors } from '@/lib/validations/utils'
 
 type SpeakingPartFormData = {
   topic: string
@@ -28,22 +30,33 @@ export function SpeakingPartFormModal({ open, onClose, part, onSave }: SpeakingP
   const [speakingMinutes, setSpeakingMinutes] = useState(4)
   const [cueCardPrompt, setCueCardPrompt] = useState('')
   const [preparationSeconds, setPreparationSeconds] = useState(60)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     setTopic(part.topic)
     setSpeakingMinutes(part.speakingMinutes)
     setCueCardPrompt(part.cueCardPrompt ?? '')
     setPreparationSeconds(part.preparationSeconds ?? 60)
+    setErrors({})
   }, [part, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const data: SpeakingPartFormData = { topic, speakingMinutes }
+
+    const payload: SpeakingPartFormData = { topic, speakingMinutes }
     if (part.part === 2) {
-      data.cueCardPrompt = cueCardPrompt
-      data.preparationSeconds = preparationSeconds
+      payload.cueCardPrompt = cueCardPrompt
+      payload.preparationSeconds = preparationSeconds
     }
-    onSave(data)
+
+    const result = SpeakingPartSchema.safeParse(payload)
+    if (!result.success) {
+      setErrors(fieldErrors(result.error))
+      return
+    }
+    setErrors({})
+
+    onSave(payload)
     onClose()
   }
 
@@ -52,12 +65,14 @@ export function SpeakingPartFormModal({ open, onClose, part, onSave }: SpeakingP
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Topic</label>
-          <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Personal Background & Hometown" required />
+          <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Personal Background & Hometown" />
+          {errors.topic && <p className="text-xs text-destructive mt-1">{errors.topic}</p>}
         </div>
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Speaking Time (minutes)</label>
           <Input type="number" min={1} max={15} value={speakingMinutes} onChange={(e) => setSpeakingMinutes(Number(e.target.value))} />
+          {errors.speakingMinutes && <p className="text-xs text-destructive mt-1">{errors.speakingMinutes}</p>}
         </div>
 
         {part.part === 2 && (
@@ -65,6 +80,7 @@ export function SpeakingPartFormModal({ open, onClose, part, onSave }: SpeakingP
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Preparation Time (seconds)</label>
               <Input type="number" min={30} max={120} value={preparationSeconds} onChange={(e) => setPreparationSeconds(Number(e.target.value))} />
+              {errors.preparationSeconds && <p className="text-xs text-destructive mt-1">{errors.preparationSeconds}</p>}
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Cue Card Prompt</label>

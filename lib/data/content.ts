@@ -1,23 +1,32 @@
 import { cache } from 'react'
 import { delay } from '@/lib/utils/delay'
-import { mockBlogPosts } from '@/lib/mock/blog-posts'
-import { mockBlogCategories } from '@/lib/mock/blog-categories'
 import { mockExamGuideSections } from '@/lib/mock/exam-guide'
 import { mockBandTables } from '@/lib/mock/band-tables'
+import { mockBlogPosts } from '@/lib/mock/blog-posts'
+import { mockBlogCategories } from '@/lib/mock/blog-categories'
+import { fetchBlogPosts, fetchBlogPostById, fetchBlogCategories } from '@/lib/api/blog'
+import type { BlogPostsPage } from '@/lib/api/blog'
 
-export const getBlogPosts = cache(async () => {
-  await delay(150)
-  return mockBlogPosts
+export const getBlogPosts = cache(async (page = 1, pageSize = 20) => {
+  return fetchBlogPosts(page, pageSize).catch((): BlogPostsPage => {
+    const start = (page - 1) * pageSize
+    const items = mockBlogPosts.slice(start, start + pageSize)
+    return {
+      posts: items,
+      totalCount: mockBlogPosts.length,
+      totalPages: Math.ceil(mockBlogPosts.length / pageSize),
+      page,
+      pageSize,
+    }
+  })
 })
 
 export const getBlogCategories = cache(async () => {
-  await delay(80)
-  return mockBlogCategories
+  return fetchBlogCategories().catch(() => mockBlogCategories)
 })
 
 export const getBlogPostById = cache(async (id: string) => {
-  await delay(100)
-  return mockBlogPosts.find((p) => p.id === id) ?? null
+  return fetchBlogPostById(id).catch(() => mockBlogPosts.find((p) => p.id === id) ?? null)
 })
 
 export const getExamGuideSections = cache(async () => {

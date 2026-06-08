@@ -1,13 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
+import { fetchBlogCategories, createBlogCategory, updateBlogCategory, deleteBlogCategory } from '@/lib/api/blog'
 import type { BlogCategory } from '@/lib/types/content'
+import { BlogCategorySchema } from '@/lib/validations/blog'
+import { fieldErrors } from '@/lib/validations/utils'
 
 type Props = { initialCategories: BlogCategory[] }
 
@@ -17,6 +20,10 @@ function toSlug(name: string) {
 
 export function BlogCategoryShell({ initialCategories }: Props) {
   const [categories, setCategories] = useState(initialCategories)
+
+  useEffect(() => {
+    fetchBlogCategories().then(setCategories).catch(() => {})
+  }, [])
 
   // Add form
   const [showForm, setShowForm] = useState(false)
@@ -31,44 +38,75 @@ export function BlogCategoryShell({ initialCategories }: Props) {
   // Delete
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
-  const handleAdd = (e: React.FormEvent) => {
+  // Async state
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
-    const trimmed = newName.trim()
-    if (!trimmed) return
-    setCategories((prev) => [
-      ...prev,
-      { id: `cat-${Date.now()}`, name: trimmed, slug: toSlug(trimmed), description: newDesc.trim() },
-    ])
-    setNewName('')
-    setNewDesc('')
-    setShowForm(false)
+    const result = BlogCategorySchema.safeParse({ name: newName, description: newDesc })
+    if (!result.success) {
+      setError(Object.values(fieldErrors(result.error))[0] ?? 'Validation failed')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      const created = await createBlogCategory(newName.trim(), newDesc.trim())
+      setCategories((prev) => [...prev, created])
+      setNewName('')
+      setNewDesc('')
+      setShowForm(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create category')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const startEdit = (cat: BlogCategory) => {
     setEditingId(cat.id)
     setEditName(cat.name)
     setEditDesc(cat.description)
+    setError(null)
   }
 
-  const commitEdit = () => {
-    const trimmed = editName.trim()
-    if (!trimmed || !editingId) return
-    setCategories((prev) =>
-      prev.map((c) =>
-        c.id === editingId
-          ? { ...c, name: trimmed, slug: toSlug(trimmed), description: editDesc.trim() }
-          : c
-      )
-    )
-    setEditingId(null)
+  const commitEdit = async () => {
+    if (!editingId) return
+    const result = BlogCategorySchema.safeParse({ name: editName, description: editDesc })
+    if (!result.success) {
+      setError(Object.values(fieldErrors(result.error))[0] ?? 'Validation failed')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      const updated = await updateBlogCategory(editingId, editName.trim(), editDesc.trim())
+      setCategories((prev) => prev.map((c) => (c.id === editingId ? updated : c)))
+      setEditingId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update category')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const cancelEdit = () => setEditingId(null)
+  const cancelEdit = () => { setEditingId(null); setError(null) }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteId) return
-    setCategories((prev) => prev.filter((c) => c.id !== deleteId))
-    setDeleteId(null)
+    setSaving(true)
+    setError(null)
+    try {
+      await deleteBlogCategory(deleteId)
+      setCategories((prev) => prev.filter((c) => c.id !== deleteId))
+      setDeleteId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete category')
+      setDeleteId(null)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -86,12 +124,16 @@ export function BlogCategoryShell({ initialCategories }: Props) {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Blog Categories</h1>
         {!showForm && (
-          <Button size="sm" onClick={() => setShowForm(true)}>
+          <Button size="sm" onClick={() => { setShowForm(true); setError(null) }}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             Add Category
           </Button>
         )}
       </div>
+
+      {error && (
+        <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
+      )}
 
       {showForm && (
         <Card>
@@ -107,6 +149,7 @@ export function BlogCategoryShell({ initialCategories }: Props) {
                     placeholder="e.g. Grammar"
                     required
                     autoFocus
+                    disabled={saving}
                   />
                 </div>
                 <div className="space-y-1">
@@ -115,6 +158,7 @@ export function BlogCategoryShell({ initialCategories }: Props) {
                     value={newDesc}
                     onChange={(e) => setNewDesc(e.target.value)}
                     placeholder="Short description…"
+                    disabled={saving}
                   />
                 </div>
               </div>
@@ -124,10 +168,13 @@ export function BlogCategoryShell({ initialCategories }: Props) {
                   variant="ghost"
                   size="sm"
                   onClick={() => { setShowForm(false); setNewName(''); setNewDesc('') }}
+                  disabled={saving}
                 >
                   Cancel
                 </Button>
-                <Button type="submit" size="sm">Save</Button>
+                <Button type="submit" size="sm" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save'}
+                </Button>
               </div>
             </form>
           </CardContent>
@@ -156,18 +203,20 @@ export function BlogCategoryShell({ initialCategories }: Props) {
                         <Input
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitEdit() } if (e.key === 'Escape') cancelEdit() }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void commitEdit() } if (e.key === 'Escape') cancelEdit() }}
                           className="h-7 text-xs"
                           autoFocus
+                          disabled={saving}
                         />
                       </td>
                       <td className="px-3 py-2 hidden sm:table-cell">
                         <Input
                           value={editDesc}
                           onChange={(e) => setEditDesc(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitEdit() } if (e.key === 'Escape') cancelEdit() }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void commitEdit() } if (e.key === 'Escape') cancelEdit() }}
                           placeholder="Description…"
                           className="h-7 text-xs"
+                          disabled={saving}
                         />
                       </td>
                       <td className="px-3 py-2 text-muted-foreground font-mono text-xs hidden sm:table-cell">
@@ -176,9 +225,10 @@ export function BlogCategoryShell({ initialCategories }: Props) {
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-1 justify-end">
                           <button
-                            onClick={commitEdit}
-                            className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-muted-foreground hover:text-emerald-600 transition-colors"
+                            onClick={() => void commitEdit()}
+                            className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-muted-foreground hover:text-emerald-600 transition-colors disabled:opacity-50"
                             title="Save"
+                            disabled={saving}
                           >
                             <Check className="h-3.5 w-3.5" />
                           </button>
@@ -186,6 +236,7 @@ export function BlogCategoryShell({ initialCategories }: Props) {
                             onClick={cancelEdit}
                             className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                             title="Cancel"
+                            disabled={saving}
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -230,8 +281,10 @@ export function BlogCategoryShell({ initialCategories }: Props) {
           <strong>{categories.find((c) => c.id === deleteId)?.name}</strong>? This cannot be undone.
         </p>
         <div className="flex gap-2 justify-end">
-          <Button variant="ghost" size="sm" onClick={() => setDeleteId(null)}>Cancel</Button>
-          <Button variant="destructive" size="sm" onClick={handleDelete}>Delete</Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteId(null)} disabled={saving}>Cancel</Button>
+          <Button variant="destructive" size="sm" onClick={() => void handleDelete()} disabled={saving}>
+            {saving ? 'Deleting…' : 'Delete'}
+          </Button>
         </div>
       </Modal>
     </div>

@@ -5,11 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useAdminAuthStore } from '@/lib/store/auth-store'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { LoginSchema } from '@/lib/validations/auth'
+import { fieldErrors } from '@/lib/validations/utils'
 
 export function LoginForm() {
   const [email, setEmail] = useState('superadmin@betterielts.com')
   const [password, setPassword] = useState('super123')
   const [error, setError] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
 
   const login = useAdminAuthStore((s) => s.login)
@@ -19,6 +22,14 @@ export function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    const result = LoginSchema.safeParse({ email, password })
+    if (!result.success) {
+      setErrors(fieldErrors(result.error))
+      return
+    }
+    setErrors({})
+
     setLoading(true)
     const ok = await login(email, password)
     if (ok) {
@@ -40,8 +51,8 @@ export function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="admin@betterielts.com"
           autoComplete="email"
-          required
         />
+        {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
       </div>
       <div className="space-y-1.5">
         <label className="text-sm font-medium">Password</label>
@@ -51,8 +62,8 @@ export function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
           autoComplete="current-password"
-          required
         />
+        {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <Button type="submit" className="w-full" disabled={loading}>

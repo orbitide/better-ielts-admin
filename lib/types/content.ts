@@ -1,7 +1,15 @@
+export type BlogSeo = {
+  metaTitle?: string
+  metaDescription?: string
+  focusKeyword?: string
+  ogImage?: string
+}
+
 export type BlogPost = {
   id: string
   title: string
   slug: string
+  categoryId?: string
   category: string
   tags: string[]
   author: string
@@ -11,6 +19,7 @@ export type BlogPost = {
   excerpt: string
   content: string
   coverImageUrl?: string
+  seo?: BlogSeo
 }
 
 export type BlogCategory = {

@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import type { ListeningSection } from '@/lib/types/ielts'
+import { ListeningSectionSchema } from '@/lib/validations/ielts'
+import { fieldErrors } from '@/lib/validations/utils'
 
 type ListeningSectionFormData = {
   sectionNumber: 1 | 2 | 3 | 4
@@ -29,6 +31,7 @@ export function ListeningSectionFormModal({ open, onClose, editing, onSave }: Li
   const [audioUrl, setAudioUrl] = useState('')
   const [audioDurationSeconds, setAudioDurationSeconds] = useState(300)
   const [transcript, setTranscript] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (editing) {
@@ -42,10 +45,19 @@ export function ListeningSectionFormModal({ open, onClose, editing, onSave }: Li
       setAudioDurationSeconds(300)
       setTranscript('')
     }
+    setErrors({})
   }, [editing, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    const result = ListeningSectionSchema.safeParse({ sectionNumber, audioUrl, audioDurationSeconds, transcript })
+    if (!result.success) {
+      setErrors(fieldErrors(result.error))
+      return
+    }
+    setErrors({})
+
     onSave({ sectionNumber, audioUrl, audioDurationSeconds, transcript })
     onClose()
   }
@@ -65,7 +77,8 @@ export function ListeningSectionFormModal({ open, onClose, editing, onSave }: Li
           </div>
           <div className="col-span-2 space-y-1.5">
             <label className="text-sm font-medium">Audio URL</label>
-            <Input value={audioUrl} onChange={(e) => setAudioUrl(e.target.value)} placeholder="/audio/lt-1-section-1.mp3" required />
+            <Input value={audioUrl} onChange={(e) => setAudioUrl(e.target.value)} placeholder="/audio/lt-1-section-1.mp3" />
+            {errors.audioUrl && <p className="text-xs text-destructive mt-1">{errors.audioUrl}</p>}
           </div>
         </div>
 

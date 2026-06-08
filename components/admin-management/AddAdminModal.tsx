@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import type { ManagedAdmin } from '@/lib/types/admin'
+import { AddAdminSchema } from '@/lib/validations/auth'
+import { fieldErrors } from '@/lib/validations/utils'
 
 type AddAdminModalProps = {
   open: boolean
@@ -23,9 +25,18 @@ export function AddAdminModal({ open, onClose, onAdd }: AddAdminModalProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<ManagedAdmin['role']>('moderator')
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    const result = AddAdminSchema.safeParse({ name, email, role })
+    if (!result.success) {
+      setErrors(fieldErrors(result.error))
+      return
+    }
+    setErrors({})
+
     const newAdmin: ManagedAdmin = {
       id: `admin-${Date.now()}`,
       name,
@@ -46,30 +57,17 @@ export function AddAdminModal({ open, onClose, onAdd }: AddAdminModalProps) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Name</label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Full name"
-            required
-          />
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" />
+          {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
         </div>
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Email</label>
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@betterielts.com"
-            required
-          />
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@betterielts.com" />
+          {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
         </div>
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Role</label>
-          <Select
-            value={role}
-            onChange={(e) => setRole(e.target.value as ManagedAdmin['role'])}
-            className="w-full"
-          >
+          <Select value={role} onChange={(e) => setRole(e.target.value as ManagedAdmin['role'])} className="w-full">
             {roleOptions.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}

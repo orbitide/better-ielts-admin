@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import type { ListeningQuestion, ListeningQuestionType, McqOption, MatchingOption } from '@/lib/types/ielts'
+import { ListeningQuestionSchema } from '@/lib/validations/ielts'
+import { fieldErrors } from '@/lib/validations/utils'
 
 type Props = {
   open: boolean
@@ -36,6 +38,7 @@ export function ListeningQuestionFormModal({ open, onClose, editing, nextQuestio
   const [fbAnswer, setFbAnswer] = useState('')
   const [matchOptions, setMatchOptions] = useState<MatchingOption[]>([{ key: 'i', text: '' }])
   const [matchAnswer, setMatchAnswer] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!open) return
@@ -61,10 +64,24 @@ export function ListeningQuestionFormModal({ open, onClose, editing, nextQuestio
       setMatchOptions([{ key: 'i', text: '' }])
       setMatchAnswer('')
     }
+    setErrors({})
   }, [editing, nextQuestionNumber, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    const payload =
+      qType === 'mcq'      ? { qType, qNumber, stem, mcqOptions, mcqAnswer } :
+      qType === 'matching' ? { qType, qNumber, stem, matchOptions, matchAnswer } :
+                             { qType, qNumber, stem, fbAnswer }
+
+    const result = ListeningQuestionSchema.safeParse(payload)
+    if (!result.success) {
+      setErrors(fieldErrors(result.error))
+      return
+    }
+    setErrors({})
+
     const id = editing?.id ?? genId()
     let question: ListeningQuestion
     if (qType === 'mcq') {
@@ -99,7 +116,7 @@ export function ListeningQuestionFormModal({ open, onClose, editing, nextQuestio
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2 space-y-1.5">
             <label className="text-sm font-medium">Question Type</label>
-            <Select value={qType} onChange={(e) => setQType(e.target.value as ListeningQuestionType)} className="w-full">
+            <Select value={qType} onChange={(e) => { setQType(e.target.value as ListeningQuestionType); setErrors({}) }} className="w-full">
               <option value="fill-blank">Fill in the Blank</option>
               <option value="mcq">Multiple Choice (MCQ)</option>
               <option value="matching">Matching</option>
@@ -113,7 +130,8 @@ export function ListeningQuestionFormModal({ open, onClose, editing, nextQuestio
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Question Stem</label>
-          <Input value={stem} onChange={(e) => setStem(e.target.value)} placeholder={qType === 'fill-blank' ? 'Use ________ for the blank…' : 'Enter the question…'} required />
+          <Input value={stem} onChange={(e) => setStem(e.target.value)} placeholder={qType === 'fill-blank' ? 'Use ________ for the blank…' : 'Enter the question…'} />
+          {errors.stem && <p className="text-xs text-destructive mt-1">{errors.stem}</p>}
         </div>
 
         {qType === 'mcq' && (
@@ -123,7 +141,7 @@ export function ListeningQuestionFormModal({ open, onClose, editing, nextQuestio
               {mcqOptions.map((opt, i) => (
                 <div key={opt.label} className="flex items-center gap-2">
                   <span className="w-5 text-xs font-mono text-muted-foreground shrink-0">{opt.label}</span>
-                  <Input value={opt.text} onChange={(e) => updateMcqOption(i, e.target.value)} placeholder={`Option ${opt.label}…`} required />
+                  <Input value={opt.text} onChange={(e) => updateMcqOption(i, e.target.value)} placeholder={`Option ${opt.label}…`} />
                 </div>
               ))}
             </div>
@@ -139,7 +157,8 @@ export function ListeningQuestionFormModal({ open, onClose, editing, nextQuestio
         {qType === 'fill-blank' && (
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Correct Answer</label>
-            <Input value={fbAnswer} onChange={(e) => setFbAnswer(e.target.value)} placeholder="Correct word(s)…" required />
+            <Input value={fbAnswer} onChange={(e) => setFbAnswer(e.target.value)} placeholder="Correct word(s)…" />
+            {errors.fbAnswer && <p className="text-xs text-destructive mt-1">{errors.fbAnswer}</p>}
           </div>
         )}
 
@@ -155,7 +174,7 @@ export function ListeningQuestionFormModal({ open, onClose, editing, nextQuestio
               {matchOptions.map((opt, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Input value={opt.key} onChange={(e) => updateMatchOption(i, 'key', e.target.value)} className="w-16 shrink-0" placeholder="key" />
-                  <Input value={opt.text} onChange={(e) => updateMatchOption(i, 'text', e.target.value)} placeholder="Option text…" required />
+                  <Input value={opt.text} onChange={(e) => updateMatchOption(i, 'text', e.target.value)} placeholder="Option text…" />
                   <button type="button" onClick={() => removeMatchOption(i)} className="text-muted-foreground hover:text-red-600 shrink-0">
                     <X className="h-4 w-4" />
                   </button>
@@ -164,7 +183,8 @@ export function ListeningQuestionFormModal({ open, onClose, editing, nextQuestio
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Correct Answer</label>
-              <Input value={matchAnswer} onChange={(e) => setMatchAnswer(e.target.value)} placeholder="e.g. i" required />
+              <Input value={matchAnswer} onChange={(e) => setMatchAnswer(e.target.value)} placeholder="e.g. i" />
+              {errors.matchAnswer && <p className="text-xs text-destructive mt-1">{errors.matchAnswer}</p>}
             </div>
           </>
         )}

@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import type { ContentRow } from './ContentTable'
 import type { IeltsStatus } from '@/lib/types/ielts'
+import { ContentSchema } from '@/lib/validations/ielts'
+import { fieldErrors } from '@/lib/validations/utils'
 
 type ContentFormModalProps = {
   open: boolean
@@ -28,6 +30,7 @@ export function ContentFormModal({
   const [title, setTitle] = useState('')
   const [type, setType] = useState(typeOptions[0])
   const [status, setStatus] = useState<IeltsStatus>('draft')
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (editing) {
@@ -38,10 +41,19 @@ export function ContentFormModal({
       setType(typeOptions[0])
       setStatus('draft')
     }
+    setErrors({})
   }, [editing, typeOptions])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    const result = ContentSchema.safeParse({ title, type, status })
+    if (!result.success) {
+      setErrors(fieldErrors(result.error))
+      return
+    }
+    setErrors({})
+
     onSave({ title, type, status })
     onClose()
   }
@@ -51,12 +63,8 @@ export function ContentFormModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Title</label>
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter title…"
-            required
-          />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter title…" />
+          {errors.title && <p className="text-xs text-destructive mt-1">{errors.title}</p>}
         </div>
         <div className="space-y-1.5">
           <label className="text-sm font-medium">{typeLabel}</label>
@@ -67,6 +75,7 @@ export function ContentFormModal({
               </option>
             ))}
           </Select>
+          {errors.type && <p className="text-xs text-destructive mt-1">{errors.type}</p>}
         </div>
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Status</label>
@@ -77,12 +86,8 @@ export function ContentFormModal({
           </Select>
         </div>
         <div className="flex gap-2 justify-end pt-2">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" size="sm">
-            {editing ? 'Save Changes' : 'Create'}
-          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button type="submit" size="sm">{editing ? 'Save Changes' : 'Create'}</Button>
         </div>
       </form>
     </Modal>

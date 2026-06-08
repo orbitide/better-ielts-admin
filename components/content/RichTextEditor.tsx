@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MediaLibraryModal } from '@/components/media/MediaLibraryModal'
 import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import { NodeSelection } from '@tiptap/pm/state'
@@ -154,8 +154,13 @@ function ImageBar({ editor }: { editor: Editor }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attrs.src])
 
+  // Empty string or "0" both mean auto
+  const normalize = (v: string) => (!v.trim() || v.trim() === '0') ? 'auto' : v.trim()
+
   const apply = (updates: Record<string, string>) =>
-    editor.chain().focus().updateAttributes('image', updates).run()
+    editor.chain().focus().updateAttributes('image', Object.fromEntries(
+      Object.entries(updates).map(([k, v]) => [k, k === 'align' ? v : normalize(v)])
+    )).run()
 
   const align = attrs.align ?? 'center'
 
@@ -221,6 +226,104 @@ function ImageBar({ editor }: { editor: Editor }) {
   )
 }
 
+/* ─── Table grid picker ───────────────────────────────────────────────── */
+const TABLE_ROWS = 8
+const TABLE_COLS = 10
+
+function TablePickerButton({ editor, active }: { editor: Editor; active: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [hoverRow, setHoverRow] = useState(0)
+  const [hoverCol, setHoverCol] = useState(0)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLDivElement>(null)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const openPicker = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 4, left: r.left })
+    }
+    setOpen(true)
+  }
+
+  const scheduledClose = () => {
+    closeTimer.current = setTimeout(() => {
+      setOpen(false)
+      setHoverRow(0)
+      setHoverCol(0)
+    }, 80)
+  }
+
+  const cancelClose = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+  }
+
+  const insert = () => {
+    if (hoverRow > 0 && hoverCol > 0) {
+      editor.chain().focus().insertTable({ rows: hoverRow, cols: hoverCol, withHeaderRow: true }).run()
+    }
+    setOpen(false)
+    setHoverRow(0)
+    setHoverCol(0)
+  }
+
+  return (
+    <>
+      <div ref={btnRef} onMouseEnter={openPicker} onMouseLeave={scheduledClose}>
+        <button
+          type="button"
+          title="Insert table"
+          className={cn(
+            'rounded p-1.5 transition-colors',
+            active || open
+              ? 'bg-accent text-foreground'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent',
+          )}
+        >
+          <TableIcon className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {open && (
+        <div
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 50 }}
+          className="rounded-md border border-input bg-popover p-2 shadow-lg"
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduledClose}
+        >
+          <p className="mb-1.5 text-center text-xs text-muted-foreground select-none">
+            {hoverRow > 0 && hoverCol > 0 ? `${hoverRow} × ${hoverCol}` : 'Insert table'}
+          </p>
+          <div
+            className="grid gap-[3px]"
+            style={{ gridTemplateColumns: `repeat(${TABLE_COLS}, 18px)` }}
+          >
+            {Array.from({ length: TABLE_ROWS * TABLE_COLS }, (_, i) => {
+              const row = Math.floor(i / TABLE_COLS) + 1
+              const col = (i % TABLE_COLS) + 1
+              const isHighlighted = row <= hoverRow && col <= hoverCol
+              return (
+                <div
+                  key={i}
+                  className={cn(
+                    'h-[18px] w-[18px] rounded-[2px] border cursor-pointer transition-colors',
+                    isHighlighted
+                      ? 'border-primary bg-primary/20'
+                      : 'border-border bg-background hover:border-primary/40',
+                  )}
+                  onMouseEnter={() => { setHoverRow(row); setHoverCol(col) }}
+                  onClick={insert}
+                />
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 /* ─── Main component ──────────────────────────────────────────────────── */
 type RichTextEditorProps = {
   value: string
@@ -233,6 +336,8 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
   const [linkBarOpen, setLinkBarOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
+  const [inImage, setInImage] = useState(false)
+  const [inTable, setInTable] = useState(false)
 
   const editor = useEditor({
     extensions: [
@@ -251,6 +356,21 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   })
+
+  useEffect(() => {
+    if (!editor) return
+    const update = () => {
+      const { selection } = editor.state
+      setInImage(selection instanceof NodeSelection && selection.node.type.name === 'image')
+      setInTable(editor.isActive('table'))
+    }
+    editor.on('selectionUpdate', update)
+    editor.on('transaction', update)
+    return () => {
+      editor.off('selectionUpdate', update)
+      editor.off('transaction', update)
+    }
+  }, [editor])
 
   if (!editor) return null
 
@@ -277,9 +397,6 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     }
   }
 
-  const inTable = editor.isActive('table')
-  const { selection } = editor.state
-  const inImage = selection instanceof NodeSelection && selection.node.type.name === 'image'
 
   return (
     <div className="rounded-md border border-input [overflow:clip] focus-within:ring-1 focus-within:ring-ring">
@@ -340,13 +457,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         <TB onClick={() => setMediaLibraryOpen(true)} active={mediaLibraryOpen} title="Insert image">
           <ImageIcon className="h-3.5 w-3.5" />
         </TB>
-        <TB
-          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
-          active={inTable}
-          title="Insert table"
-        >
-          <TableIcon className="h-3.5 w-3.5" />
-        </TB>
+        <TablePickerButton editor={editor} active={inTable} />
 
         {SEP}
 

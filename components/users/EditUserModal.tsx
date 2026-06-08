@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { UserAvatar } from '@/components/users/UserAvatar'
 import type { User } from '@/lib/types/user'
+import { EditUserSchema } from '@/lib/validations/users'
+import { fieldErrors } from '@/lib/validations/utils'
 
 type Props = {
   open: boolean
@@ -18,12 +20,14 @@ export function EditUserModal({ open, onClose, user, onSave }: Props) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [plan, setPlan] = useState<'free' | 'pro' | 'elite'>('free')
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (user) {
       setName(user.name)
       setEmail(user.email)
       setPlan(user.plan)
+      setErrors({})
     }
   }, [user])
 
@@ -31,6 +35,14 @@ export function EditUserModal({ open, onClose, user, onSave }: Props) {
 
   function handleSave() {
     if (!user) return
+
+    const result = EditUserSchema.safeParse({ name, email, plan })
+    if (!result.success) {
+      setErrors(fieldErrors(result.error))
+      return
+    }
+    setErrors({})
+
     onSave({ ...user, name: name.trim(), email: email.trim(), plan })
     onClose()
   }
@@ -49,11 +61,13 @@ export function EditUserModal({ open, onClose, user, onSave }: Props) {
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">Name</label>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" />
+          {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
         </div>
 
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">Email</label>
           <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email address" />
+          {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
         </div>
 
         <div className="space-y-1.5">
@@ -72,7 +86,7 @@ export function EditUserModal({ open, onClose, user, onSave }: Props) {
 
       <div className="flex justify-end gap-2 mt-6">
         <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-        <Button size="sm" onClick={handleSave} disabled={!name.trim() || !email.trim()}>Save</Button>
+        <Button size="sm" onClick={handleSave}>Save</Button>
       </div>
     </Modal>
   )

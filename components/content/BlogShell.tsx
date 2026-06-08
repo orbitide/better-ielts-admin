@@ -1,15 +1,68 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BlogTable } from './BlogTable'
-import type { BlogPost } from '@/lib/types/content'
+import { fetchBlogPosts, deleteBlogPost } from '@/lib/api/blog'
+import type { BlogPostsPage } from '@/lib/api/blog'
+import { Button } from '@/components/ui/Button'
 
-export function BlogShell({ initialPosts }: { initialPosts: BlogPost[] }) {
-  const [posts, setPosts] = useState(initialPosts)
+export function BlogShell({ initialData }: { initialData: BlogPostsPage }) {
+  const [posts, setPosts] = useState(initialData.posts)
+  const [page, setPage] = useState(initialData.page)
+  const [totalPages, setTotalPages] = useState(initialData.totalPages)
+  const [totalCount, setTotalCount] = useState(initialData.totalCount)
+  const [loading, setLoading] = useState(false)
 
-  const handleDelete = (id: string) => {
-    setPosts((prev) => prev.filter((p) => p.id !== id))
+  const loadPage = async (p: number) => {
+    setLoading(true)
+    try {
+      const data = await fetchBlogPosts(p)
+      setPosts(data.posts)
+      setPage(data.page)
+      setTotalPages(data.totalPages)
+      setTotalCount(data.totalCount)
+    } catch {} finally {
+      setLoading(false)
+    }
   }
 
-  return <BlogTable posts={posts} onDelete={handleDelete} />
+  useEffect(() => {
+    loadPage(1)
+  }, [])
+
+  const handleDelete = async (id: string) => {
+    await deleteBlogPost(id)
+    loadPage(page)
+  }
+
+  return (
+    <div className="space-y-3">
+      <BlogTable posts={posts} onDelete={handleDelete} totalCount={totalCount} loading={loading} />
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            Page {page} of {totalPages} · {totalCount} posts total
+          </p>
+          <div className="flex gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1 || loading}
+              onClick={() => loadPage(page - 1)}
+            >
+              ← Prev
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages || loading}
+              onClick={() => loadPage(page + 1)}
+            >
+              Next →
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }

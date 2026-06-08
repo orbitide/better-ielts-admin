@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import type { ReadingQuestion, McqQuestion, TfngQuestion, MatchingQuestion, FillBlankQuestion, McqOption, MatchingOption } from '@/lib/types/ielts'
+import { ReadingQuestionSchema } from '@/lib/validations/ielts'
+import { fieldErrors } from '@/lib/validations/utils'
 
 type Props = {
   open: boolean
@@ -33,24 +35,22 @@ export function ReadingQuestionFormModal({ open, onClose, editing, nextQuestionN
   const [qType, setQType] = useState<QuestionType>('mcq')
   const [qNumber, setQNumber] = useState(nextQuestionNumber)
 
-  // MCQ state
   const [mcqStem, setMcqStem] = useState('')
   const [mcqOptions, setMcqOptions] = useState<McqOption[]>(defaultMcqOptions)
   const [mcqAnswer, setMcqAnswer] = useState('A')
 
-  // TFNG state
   const [tfngStatement, setTfngStatement] = useState('')
   const [tfngAnswer, setTfngAnswer] = useState<'TRUE' | 'FALSE' | 'NOT GIVEN'>('TRUE')
 
-  // Matching state
   const [matchStem, setMatchStem] = useState('')
   const [matchOptions, setMatchOptions] = useState<MatchingOption[]>([{ key: 'i', text: '' }])
   const [matchAnswer, setMatchAnswer] = useState('')
 
-  // Fill-blank state
   const [fbStem, setFbStem] = useState('')
   const [fbAnswer, setFbAnswer] = useState('')
   const [fbWordLimit, setFbWordLimit] = useState<number | ''>('')
+
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!open) return
@@ -88,10 +88,25 @@ export function ReadingQuestionFormModal({ open, onClose, editing, nextQuestionN
       setFbAnswer('')
       setFbWordLimit('')
     }
+    setErrors({})
   }, [editing, nextQuestionNumber, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    const payload =
+      qType === 'mcq'        ? { qType, qNumber, mcqStem, mcqOptions, mcqAnswer } :
+      qType === 'tfng'       ? { qType, qNumber, tfngStatement, tfngAnswer } :
+      qType === 'matching'   ? { qType, qNumber, matchStem, matchOptions, matchAnswer } :
+                               { qType, qNumber, fbStem, fbAnswer, fbWordLimit: fbWordLimit === '' ? undefined : fbWordLimit }
+
+    const result = ReadingQuestionSchema.safeParse(payload)
+    if (!result.success) {
+      setErrors(fieldErrors(result.error))
+      return
+    }
+    setErrors({})
+
     const id = editing?.id ?? genId()
     let question: ReadingQuestion
     if (qType === 'mcq') {
@@ -128,7 +143,7 @@ export function ReadingQuestionFormModal({ open, onClose, editing, nextQuestionN
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2 space-y-1.5">
             <label className="text-sm font-medium">Question Type</label>
-            <Select value={qType} onChange={(e) => setQType(e.target.value as QuestionType)} className="w-full">
+            <Select value={qType} onChange={(e) => { setQType(e.target.value as QuestionType); setErrors({}) }} className="w-full">
               <option value="mcq">Multiple Choice (MCQ)</option>
               <option value="tfng">True / False / Not Given</option>
               <option value="matching">Matching</option>
@@ -141,19 +156,19 @@ export function ReadingQuestionFormModal({ open, onClose, editing, nextQuestionN
           </div>
         </div>
 
-        {/* MCQ fields */}
         {qType === 'mcq' && (
           <>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Question Stem</label>
-              <Input value={mcqStem} onChange={(e) => setMcqStem(e.target.value)} placeholder="Enter the question…" required />
+              <Input value={mcqStem} onChange={(e) => setMcqStem(e.target.value)} placeholder="Enter the question…" />
+              {errors.mcqStem && <p className="text-xs text-destructive mt-1">{errors.mcqStem}</p>}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Options</label>
               {mcqOptions.map((opt, i) => (
                 <div key={opt.label} className="flex items-center gap-2">
                   <span className="w-5 text-xs font-mono text-muted-foreground shrink-0">{opt.label}</span>
-                  <Input value={opt.text} onChange={(e) => updateMcqOption(i, e.target.value)} placeholder={`Option ${opt.label}…`} required />
+                  <Input value={opt.text} onChange={(e) => updateMcqOption(i, e.target.value)} placeholder={`Option ${opt.label}…`} />
                 </div>
               ))}
             </div>
@@ -166,12 +181,12 @@ export function ReadingQuestionFormModal({ open, onClose, editing, nextQuestionN
           </>
         )}
 
-        {/* TFNG fields */}
         {qType === 'tfng' && (
           <>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Statement</label>
-              <Input value={tfngStatement} onChange={(e) => setTfngStatement(e.target.value)} placeholder="Enter the statement…" required />
+              <Input value={tfngStatement} onChange={(e) => setTfngStatement(e.target.value)} placeholder="Enter the statement…" />
+              {errors.tfngStatement && <p className="text-xs text-destructive mt-1">{errors.tfngStatement}</p>}
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Correct Answer</label>
@@ -184,12 +199,12 @@ export function ReadingQuestionFormModal({ open, onClose, editing, nextQuestionN
           </>
         )}
 
-        {/* Matching fields */}
         {qType === 'matching' && (
           <>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Question Stem</label>
-              <Input value={matchStem} onChange={(e) => setMatchStem(e.target.value)} placeholder="Enter the matching instruction…" required />
+              <Input value={matchStem} onChange={(e) => setMatchStem(e.target.value)} placeholder="Enter the matching instruction…" />
+              {errors.matchStem && <p className="text-xs text-destructive mt-1">{errors.matchStem}</p>}
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -201,7 +216,7 @@ export function ReadingQuestionFormModal({ open, onClose, editing, nextQuestionN
               {matchOptions.map((opt, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Input value={opt.key} onChange={(e) => updateMatchOption(i, 'key', e.target.value)} className="w-16 shrink-0" placeholder="key" />
-                  <Input value={opt.text} onChange={(e) => updateMatchOption(i, 'text', e.target.value)} placeholder="Option text…" required />
+                  <Input value={opt.text} onChange={(e) => updateMatchOption(i, 'text', e.target.value)} placeholder="Option text…" />
                   <button type="button" onClick={() => removeMatchOption(i)} className="text-muted-foreground hover:text-red-600 shrink-0">
                     <X className="h-4 w-4" />
                   </button>
@@ -210,22 +225,24 @@ export function ReadingQuestionFormModal({ open, onClose, editing, nextQuestionN
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Correct Answer</label>
-              <Input value={matchAnswer} onChange={(e) => setMatchAnswer(e.target.value)} placeholder="e.g. i" required />
+              <Input value={matchAnswer} onChange={(e) => setMatchAnswer(e.target.value)} placeholder="e.g. i" />
+              {errors.matchAnswer && <p className="text-xs text-destructive mt-1">{errors.matchAnswer}</p>}
             </div>
           </>
         )}
 
-        {/* Fill-blank fields */}
         {qType === 'fill-blank' && (
           <>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Question Stem</label>
-              <Input value={fbStem} onChange={(e) => setFbStem(e.target.value)} placeholder="Use ________ for the blank…" required />
+              <Input value={fbStem} onChange={(e) => setFbStem(e.target.value)} placeholder="Use ________ for the blank…" />
+              {errors.fbStem && <p className="text-xs text-destructive mt-1">{errors.fbStem}</p>}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Correct Answer</label>
-                <Input value={fbAnswer} onChange={(e) => setFbAnswer(e.target.value)} placeholder="Correct word(s)…" required />
+                <Input value={fbAnswer} onChange={(e) => setFbAnswer(e.target.value)} placeholder="Correct word(s)…" />
+                {errors.fbAnswer && <p className="text-xs text-destructive mt-1">{errors.fbAnswer}</p>}
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Word Limit (optional)</label>

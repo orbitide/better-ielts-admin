@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import type { ReadingSection, ReadingPassage } from '@/lib/types/ielts'
+import type { ReadingSection } from '@/lib/types/ielts'
+import { ReadingSectionSchema } from '@/lib/validations/ielts'
+import { fieldErrors } from '@/lib/validations/utils'
 
 type ReadingSectionFormData = {
   passageTitle: string
@@ -33,6 +35,7 @@ export function ReadingSectionFormModal({ open, onClose, editing, nextPassageInd
   const [passageTitle, setPassageTitle] = useState('')
   const [passageBody, setPassageBody] = useState('')
   const [passageIndex, setPassageIndex] = useState(0)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (editing) {
@@ -44,12 +47,21 @@ export function ReadingSectionFormModal({ open, onClose, editing, nextPassageInd
       setPassageBody('')
       setPassageIndex(nextPassageIndex)
     }
+    setErrors({})
   }, [editing, nextPassageIndex, open])
 
   const wordCount = countWords(passageBody)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    const result = ReadingSectionSchema.safeParse({ passageTitle, passageBody, passageIndex })
+    if (!result.success) {
+      setErrors(fieldErrors(result.error))
+      return
+    }
+    setErrors({})
+
     onSave({ passageTitle, passageBody, passageIndex })
     onClose()
   }
@@ -64,8 +76,8 @@ export function ReadingSectionFormModal({ open, onClose, editing, nextPassageInd
               value={passageTitle}
               onChange={(e) => setPassageTitle(e.target.value)}
               placeholder="e.g. The History of Urban Planning"
-              required
             />
+            {errors.passageTitle && <p className="text-xs text-destructive mt-1">{errors.passageTitle}</p>}
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Passage Index</label>
@@ -89,8 +101,8 @@ export function ReadingSectionFormModal({ open, onClose, editing, nextPassageInd
             placeholder="Paste or type the reading passage here…"
             rows={12}
             className={textareaClass}
-            required
           />
+          {errors.passageBody && <p className="text-xs text-destructive mt-1">{errors.passageBody}</p>}
         </div>
 
         <div className="flex gap-2 justify-end pt-2">

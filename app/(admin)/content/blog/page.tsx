@@ -4,10 +4,10 @@ import { BlogShell } from '@/components/content/BlogShell'
 export const metadata = { title: 'Blog Posts' }
 
 export default async function BlogPage() {
-  const posts = await getBlogPosts()
+  const data = await getBlogPosts(1)
   return (
     <div className="p-5 sm:p-6 max-w-6xl mx-auto">
-      <BlogShell initialPosts={posts} />
+      <BlogShell initialData={data} />
     </div>
   )
 }
