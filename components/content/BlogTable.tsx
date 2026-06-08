@@ -8,6 +8,13 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { PageHeader } from '@/components/ui/PageHeader'
+import {
+  DataTable,
+  DataTableToolbar,
+  DataTablePagination,
+  TableTagList,
+  type ColumnDef,
+} from '@/components/ui/DataTable'
 import type { BlogPost } from '@/lib/types/content'
 import { RoleGate } from '@/components/auth/RoleGate'
 
@@ -35,8 +42,11 @@ function getReadingTime(html: string): number {
 
 function formatPreviewDate(dateStr: string | null): string {
   if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 }
 
 type BlogTableProps = {
@@ -48,19 +58,112 @@ type BlogTableProps = {
 
 export function BlogTable({ posts, onDelete, totalCount, loading }: BlogTableProps) {
   const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
   const [deleteTarget, setDeleteTarget] = useState<BlogPost | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [previewPost, setPreviewPost] = useState<BlogPost | null>(null)
 
+  const PAGE_SIZE = 20
   const filtered = posts.filter(
     (p) =>
       p.title.toLowerCase().includes(query.toLowerCase()) ||
       p.category.toLowerCase().includes(query.toLowerCase())
   )
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+
+  const columns: ColumnDef<BlogPost>[] = [
+    {
+      accessorKey: 'title',
+      header: 'Title',
+      cell: ({ row }) => (
+        <span className="font-medium max-w-xs truncate block">{row.original.title}</span>
+      ),
+    },
+    {
+      accessorKey: 'category',
+      header: 'Category',
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.category}</span>
+      ),
+      meta: { className: 'hidden sm:table-cell' },
+    },
+    {
+      accessorKey: 'author',
+      header: 'Author',
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.author}</span>
+      ),
+      meta: { className: 'hidden md:table-cell' },
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={row.original.status === 'published' ? 'success' : 'warning'}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: 'publishedAt',
+      header: 'Date',
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.publishedAt ?? row.original.updatedAt}
+        </span>
+      ),
+      meta: { className: 'hidden lg:table-cell' },
+    },
+    {
+      accessorKey: 'tags',
+      header: 'Tags',
+      enableSorting: false,
+      cell: ({ row }) => <TableTagList tags={row.original.tags} />,
+      meta: { className: 'hidden xl:table-cell' },
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      header: '',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1 justify-end">
+          <button
+            onClick={() => setPreviewPost(row.original)}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            title="Preview"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </button>
+          <RoleGate permission="content:edit">
+            <Link
+              href={`/content/blog/${row.original.id}`}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors inline-flex"
+              title="Edit"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Link>
+          </RoleGate>
+          <RoleGate permission="content:delete">
+            <button
+              onClick={() => setDeleteTarget(row.original)}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </RoleGate>
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Blog Posts" description="Manage articles and guides published on the platform.">
+      <PageHeader
+        title="Blog Posts"
+        description="Manage articles and guides published on the platform."
+      >
         <Link
           href="/content/blog/categories"
           className="inline-flex items-center justify-center rounded-md font-medium transition-colors h-8 px-3 text-xs gap-1.5 border border-border bg-transparent hover:bg-accent hover:text-accent-foreground"
@@ -78,93 +181,30 @@ export function BlogTable({ posts, onDelete, totalCount, loading }: BlogTablePro
         </RoleGate>
       </PageHeader>
 
-      <SearchInput value={query} onChange={setQuery} placeholder="Search posts…" className="max-w-xs" />
+      <DataTableToolbar>
+        <SearchInput
+          value={query}
+          onChange={(q) => { setQuery(q); setPage(1) }}
+          placeholder="Search posts…"
+          className="max-w-xs"
+        />
+      </DataTableToolbar>
 
-      <div className={`rounded-xl border border-border overflow-hidden${loading ? ' opacity-50 pointer-events-none' : ''}`}>
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">Title</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden sm:table-cell">Category</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden md:table-cell">Author</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">Status</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden lg:table-cell">Date</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden xl:table-cell">Tags</th>
-              <th className="px-4 py-2.5" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center py-10 text-muted-foreground">
-                  No posts found.
-                </td>
-              </tr>
-            ) : (
-              filtered.map((post) => (
-                <tr key={post.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-medium max-w-xs truncate">{post.title}</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{post.category}</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{post.author}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={post.status === 'published' ? 'success' : 'warning'}>
-                      {post.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                    {post.publishedAt ?? post.updatedAt}
-                  </td>
-                  <td className="px-4 py-3 hidden xl:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {post.tags.slice(0, 2).map((tag) => (
-                        <span key={tag} className="inline-block rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                          {tag}
-                        </span>
-                      ))}
-                      {post.tags.length > 2 && (
-                        <span className="inline-block rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                          +{post.tags.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 justify-end">
-                      <button
-                        onClick={() => setPreviewPost(post)}
-                        className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                        title="Preview"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </button>
-                      <RoleGate permission="content:edit">
-                        <Link
-                          href={`/content/blog/${post.id}`}
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors inline-flex"
-                          title="Edit"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Link>
-                      </RoleGate>
-                      <RoleGate permission="content:delete">
-                        <button
-                          onClick={() => setDeleteTarget(post)}
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </RoleGate>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={paginated}
+        loading={loading}
+        emptyMessage="No posts found."
+      />
 
-      <p className="text-xs text-muted-foreground">{filtered.length} of {totalCount ?? posts.length} posts</p>
+      <DataTablePagination
+        page={page}
+        totalPages={totalPages}
+        totalCount={filtered.length}
+        sourceCount={totalCount ?? posts.length}
+        onPageChange={setPage}
+        countLabel={`${filtered.length} of ${totalCount ?? posts.length} posts`}
+      />
 
       {/* Client preview modal */}
       <Modal
@@ -175,12 +215,14 @@ export function BlogTable({ posts, onDelete, totalCount, loading }: BlogTablePro
       >
         {previewPost && (
           <div className="flex flex-col max-h-[90vh]">
-            {/* Preview bar */}
             <div className="flex items-center justify-between px-4 py-2.5 bg-muted/60 border-b border-border shrink-0">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Globe className="h-3.5 w-3.5" />
                 <span className="font-medium">Client View Preview</span>
-                <Badge variant={previewPost.status === 'published' ? 'success' : 'warning'} className="text-xs">
+                <Badge
+                  variant={previewPost.status === 'published' ? 'success' : 'warning'}
+                  className="text-xs"
+                >
                   {previewPost.status}
                 </Badge>
               </div>
@@ -201,11 +243,8 @@ export function BlogTable({ posts, onDelete, totalCount, loading }: BlogTablePro
               </div>
             </div>
 
-            {/* Client-styled article layout */}
             <div className="overflow-y-auto bg-background">
               <div className="py-10 px-4 max-w-2xl mx-auto">
-
-                {/* Cover image */}
                 {previewPost.coverImageUrl && (
                   <div className="aspect-video rounded-2xl overflow-hidden bg-muted mb-8">
                     <img
@@ -215,21 +254,17 @@ export function BlogTable({ posts, onDelete, totalCount, loading }: BlogTablePro
                     />
                   </div>
                 )}
-
-                {/* Category badge */}
-                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium mb-4 capitalize ${getCategoryColor(previewPost.category)}`}>
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium mb-4 capitalize ${getCategoryColor(previewPost.category)}`}
+                >
                   {previewPost.category}
                 </span>
-
-                {/* Title */}
                 <h1 className="text-3xl font-bold tracking-tight mb-4">{previewPost.title}</h1>
-
-                {/* Excerpt */}
                 {previewPost.excerpt && (
-                  <p className="text-muted-foreground text-lg leading-relaxed mb-6">{previewPost.excerpt}</p>
+                  <p className="text-muted-foreground text-lg leading-relaxed mb-6">
+                    {previewPost.excerpt}
+                  </p>
                 )}
-
-                {/* Author / date / reading time */}
                 <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
                   <div className="flex items-center gap-2">
                     <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-foreground">
@@ -248,19 +283,18 @@ export function BlogTable({ posts, onDelete, totalCount, loading }: BlogTablePro
                     {getReadingTime(previewPost.content)} min read
                   </span>
                 </div>
-
-                {/* Tags */}
                 {previewPost.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-8">
                     {previewPost.tags.map((tag) => (
-                      <span key={tag} className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-foreground">
+                      <span
+                        key={tag}
+                        className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-foreground"
+                      >
                         {tag}
                       </span>
                     ))}
                   </div>
                 )}
-
-                {/* Article body */}
                 <article
                   className="text-sm sm:text-base
                     [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mt-8 [&_h1]:mb-3
@@ -291,12 +325,20 @@ export function BlogTable({ posts, onDelete, totalCount, loading }: BlogTablePro
       </Modal>
 
       {/* Delete confirmation modal */}
-      <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title="Delete Post">
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete Post"
+      >
         <p className="text-sm text-muted-foreground mb-6">
-          Are you sure you want to delete <span className="font-semibold text-foreground">{deleteTarget?.title}</span>? This action cannot be undone.
+          Are you sure you want to delete{' '}
+          <span className="font-semibold text-foreground">{deleteTarget?.title}</span>? This action
+          cannot be undone.
         </p>
         <div className="flex justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>
+            Cancel
+          </Button>
           <Button
             variant="destructive"
             size="sm"

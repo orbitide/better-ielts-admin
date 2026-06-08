@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { DataTable, type ColumnDef } from '@/components/ui/DataTable'
 import type { SubscriptionRecord } from '@/lib/types/admin'
 
 const statusVariant: Record<string, 'success' | 'destructive' | 'warning'> = {
@@ -7,6 +8,52 @@ const statusVariant: Record<string, 'success' | 'destructive' | 'warning'> = {
   cancelled: 'destructive',
   past_due: 'warning',
 }
+
+const columns: ColumnDef<SubscriptionRecord>[] = [
+  {
+    accessorKey: 'userName',
+    header: 'User',
+    cell: ({ row }) => (
+      <div>
+        <p className="font-medium leading-none">{row.original.userName}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{row.original.userEmail}</p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'plan',
+    header: 'Plan',
+    cell: ({ row }) => (
+      <Badge variant={row.original.plan === 'elite' ? 'default' : 'success'}>
+        {row.original.plan}
+      </Badge>
+    ),
+    meta: { className: 'hidden sm:table-cell' },
+  },
+  {
+    accessorKey: 'status',
+    header: 'Status',
+    cell: ({ row }) => (
+      <Badge variant={statusVariant[row.original.status]}>{row.original.status}</Badge>
+    ),
+  },
+  {
+    accessorKey: 'amount',
+    header: 'Amount',
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">${row.original.amount}/mo</span>
+    ),
+    meta: { className: 'hidden md:table-cell' },
+  },
+  {
+    accessorKey: 'renewsAt',
+    header: 'Renews',
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">{row.original.renewsAt}</span>
+    ),
+    meta: { className: 'hidden lg:table-cell' },
+  },
+]
 
 export function SubscriptionStats({ subscriptions }: { subscriptions: SubscriptionRecord[] }) {
   const active = subscriptions.filter((s) => s.status === 'active').length
@@ -40,40 +87,18 @@ export function SubscriptionStats({ subscriptions }: { subscriptions: Subscripti
           <CardTitle>Recent Subscriptions</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">User</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden sm:table-cell">Plan</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">Status</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden md:table-cell">Amount</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden lg:table-cell">Renews</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {subscriptions.map((sub) => (
-                <tr key={sub.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-medium leading-none">{sub.userName}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{sub.userEmail}</p>
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <Badge variant={sub.plan === 'elite' ? 'default' : 'success'}>{sub.plan}</Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={statusVariant[sub.status]}>{sub.status}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">${sub.amount}/mo</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{sub.renewsAt}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            columns={columns}
+            data={subscriptions}
+            className="rounded-none border-0"
+          />
         </CardContent>
       </Card>
 
       {cancelled > 0 && (
-        <p className="text-xs text-muted-foreground">{cancelled} cancelled subscription{cancelled > 1 ? 's' : ''} not shown in MRR.</p>
+        <p className="text-xs text-muted-foreground">
+          {cancelled} cancelled subscription{cancelled > 1 ? 's' : ''} not shown in MRR.
+        </p>
       )}
     </div>
   )

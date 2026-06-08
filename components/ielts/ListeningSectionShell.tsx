@@ -1,13 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
-import { Badge } from '@/components/ui/Badge'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
 import { Modal } from '@/components/ui/Modal'
 import { ListeningQuestionFormModal } from './ListeningQuestionFormModal'
+import { QuestionsDataTable } from './QuestionsDataTable'
 import type { FullListeningTest, ListeningSection, ListeningQuestion, SetContext } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
 
@@ -17,7 +17,7 @@ const typeLabels: Record<ListeningQuestion['type'], string> = {
   matching: 'Matching',
 }
 
-const typeColors: Record<ListeningQuestion['type'], 'secondary' | 'warning' | 'success'> = {
+const typeVariants: Record<ListeningQuestion['type'], 'secondary' | 'warning' | 'success'> = {
   mcq: 'secondary',
   'fill-blank': 'warning',
   matching: 'success',
@@ -139,50 +139,22 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
           {sortedQuestions.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border py-10 text-center">
               <p className="text-sm text-muted-foreground">No questions yet.</p>
-              <button onClick={() => { setEditingQuestion(null); setQuestionModalOpen(true) }} className="mt-2 text-sm text-primary hover:underline">
+              <button
+                onClick={() => { setEditingQuestion(null); setQuestionModalOpen(true) }}
+                className="mt-2 text-sm text-primary hover:underline"
+              >
                 Add the first question
               </button>
             </div>
           ) : (
-            <div className="rounded-xl border border-border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs w-10">#</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">Type</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">Stem</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden md:table-cell">Answer</th>
-                    <th className="px-4 py-2.5 w-20" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {sortedQuestions.map((q) => (
-                    <tr key={q.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 text-muted-foreground">{q.questionNumber}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant={typeColors[q.type]}>{typeLabels[q.type]}</Badge>
-                      </td>
-                      <td className="px-4 py-3 max-w-xs truncate">{q.stem}</td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs hidden md:table-cell font-mono">{q.correctAnswer}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 justify-end">
-                          <RoleGate permission="ielts:edit">
-                            <button onClick={() => { setEditingQuestion(q); setQuestionModalOpen(true) }} className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                          </RoleGate>
-                          <RoleGate permission="ielts:delete">
-                            <button onClick={() => setDeleteTarget(q)} className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </RoleGate>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <QuestionsDataTable
+              questions={sortedQuestions}
+              getTypeLabel={(q) => typeLabels[q.type]}
+              getTypeVariant={(q) => typeVariants[q.type]}
+              getStem={(q) => q.stem}
+              onEdit={(q) => { setEditingQuestion(q); setQuestionModalOpen(true) }}
+              onDelete={setDeleteTarget}
+            />
           )}
         </div>
       </div>
