@@ -11,15 +11,15 @@ import { useAdminAuthStore } from '@/lib/store/auth-store'
 import type { ManagedAdmin, AuditLogEntry } from '@/lib/types/admin'
 
 const roleLabels: Record<ManagedAdmin['role'], string> = {
-  super_admin: 'Super Admin',
-  content_manager: 'Content Manager',
-  moderator: 'Moderator',
+  SuperAdmin: 'Super Admin',
+  ContentManager: 'Content Manager',
+  Moderator: 'Moderator',
 }
 
 const roleBadgeVariant: Record<ManagedAdmin['role'], 'secondary' | 'warning' | 'success'> = {
-  super_admin: 'success',
-  content_manager: 'warning',
-  moderator: 'secondary',
+  SuperAdmin: 'success',
+  ContentManager: 'warning',
+  Moderator: 'secondary',
 }
 
 function formatTimestamp(ts: string) {
@@ -113,9 +113,9 @@ export function AdminsManagementShell({ initialAdmins, initialLog }: Props) {
                             onChange={(e) => handleRoleChange(admin.id, e.target.value as ManagedAdmin['role'])}
                             className="text-xs h-7 py-0.5"
                           >
-                            <option value="super_admin">Super Admin</option>
-                            <option value="content_manager">Content Manager</option>
-                            <option value="moderator">Moderator</option>
+                            <option value="SuperAdmin">Super Admin</option>
+                            <option value="ContentManager">Content Manager</option>
+                            <option value="Moderator">Moderator</option>
                           </Select>
                         )}
                       </td>

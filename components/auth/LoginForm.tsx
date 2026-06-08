@@ -9,8 +9,8 @@ import { LoginSchema } from '@/lib/validations/auth'
 import { fieldErrors } from '@/lib/validations/utils'
 
 export function LoginForm() {
-  const [email, setEmail] = useState('superadmin@betterielts.com')
-  const [password, setPassword] = useState('super123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -31,12 +31,12 @@ export function LoginForm() {
     setErrors({})
 
     setLoading(true)
-    const ok = await login(email, password)
+    const { ok, error: loginError } = await login(email, password)
     if (ok) {
       const redirect = searchParams.get('redirect') ?? '/dashboard'
       router.replace(redirect)
     } else {
-      setError('Invalid email or password.')
+      setError(loginError ?? 'Invalid email or password.')
       setLoading(false)
     }
   }
@@ -49,7 +49,7 @@ export function LoginForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="admin@betterielts.com"
+          placeholder="Enter your email"
           autoComplete="email"
         />
         {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}

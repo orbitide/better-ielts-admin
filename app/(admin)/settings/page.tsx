@@ -49,7 +49,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {admin?.role === 'super_admin' && (
+      {admin?.role === 'SuperAdmin' && (
         <Card>
           <CardHeader>
             <CardTitle>Admin Management</CardTitle>

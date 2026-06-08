@@ -183,7 +183,7 @@ export function AdminSidebar() {
               <Settings className="h-3.5 w-3.5 text-muted-foreground" />
               Settings
             </Link>
-            {admin?.role === 'super_admin' && (
+            {admin?.role === 'SuperAdmin' && (
               <Link
                 href="/settings/admins"
                 onClick={() => setProfileOpen(false)}

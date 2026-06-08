@@ -16,15 +16,15 @@ type AddAdminModalProps = {
 }
 
 const roleOptions: { value: ManagedAdmin['role']; label: string }[] = [
-  { value: 'super_admin', label: 'Super Admin' },
-  { value: 'content_manager', label: 'Content Manager' },
-  { value: 'moderator', label: 'Moderator' },
+  { value: 'SuperAdmin', label: 'Super Admin' },
+  { value: 'ContentManager', label: 'Content Manager' },
+  { value: 'Moderator', label: 'Moderator' },
 ]
 
 export function AddAdminModal({ open, onClose, onAdd }: AddAdminModalProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<ManagedAdmin['role']>('moderator')
+  const [role, setRole] = useState<ManagedAdmin['role']>('Moderator')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,7 +48,7 @@ export function AddAdminModal({ open, onClose, onAdd }: AddAdminModalProps) {
     onAdd(newAdmin)
     setName('')
     setEmail('')
-    setRole('moderator')
+    setRole('Moderator')
     onClose()
   }
 

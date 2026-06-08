@@ -3,7 +3,7 @@ import type { AdminUser, Permission } from '@/lib/types/admin'
 export type { Permission }
 
 const ROLE_PERMISSIONS: Record<AdminUser['role'], Permission[]> = {
-  super_admin: [
+  SuperAdmin: [
     'users:view', 'users:edit', 'users:delete', 'users:ban',
     'ielts:view', 'ielts:edit', 'ielts:delete',
     'content:view', 'content:edit', 'content:publish', 'content:delete',
@@ -11,14 +11,14 @@ const ROLE_PERMISSIONS: Record<AdminUser['role'], Permission[]> = {
     'subscriptions:view',
     'admins:manage',
   ],
-  content_manager: [
+  ContentManager: [
     'users:view',
     'ielts:view', 'ielts:edit', 'ielts:delete',
     'content:view', 'content:edit', 'content:publish', 'content:delete',
     'community:view',
     'subscriptions:view',
   ],
-  moderator: [
+  Moderator: [
     'users:view', 'users:edit', 'users:ban',
     'ielts:view',
     'content:view',
@@ -32,7 +32,7 @@ export function hasPermission(role: AdminUser['role'], permission: Permission): 
 }
 
 const ROUTE_ROLE_MAP: { prefix: string; roles: AdminUser['role'][] }[] = [
-  { prefix: '/settings/admins', roles: ['super_admin'] },
+  { prefix: '/settings/admins', roles: ['SuperAdmin'] },
 ]
 
 export function canAccessRoute(role: AdminUser['role'], pathname: string): boolean {

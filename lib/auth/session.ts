@@ -1,25 +1,4 @@
-import type { AdminUser } from '@/lib/types/admin'
-
-export const SESSION_COOKIE_NAME = 'admin_session'
-export const SESSION_MAX_AGE = 30 * 60 // 30 minutes in seconds
-
-type SessionPayload = {
-  adminId: string
-  role: AdminUser['role']
-  exp: number
-}
-
-export function encodeSession(payload: Omit<SessionPayload, 'exp'>): string {
-  const data: SessionPayload = { ...payload, exp: Date.now() + SESSION_MAX_AGE * 1000 }
-  return Buffer.from(JSON.stringify(data)).toString('base64')
-}
-
-export function decodeSession(token: string): SessionPayload | null {
-  try {
-    const data = JSON.parse(Buffer.from(token, 'base64').toString('utf8')) as SessionPayload
-    if (data.exp < Date.now()) return null
-    return data
-  } catch {
-    return null
-  }
-}
+export const ACCESS_COOKIE = 'admin_access'
+export const REFRESH_COOKIE = 'admin_refresh'
+export const ACCESS_MAX_AGE = 60 * 60        // 1 hour
+export const REFRESH_MAX_AGE = 30 * 24 * 60 * 60 // 30 days

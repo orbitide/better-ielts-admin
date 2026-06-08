@@ -1,13 +1,13 @@
 import { cookies } from 'next/headers'
-import { decodeSession, SESSION_COOKIE_NAME } from '@/lib/auth/session'
+import { decodeSession, ACCESS_COOKIE } from '@/lib/auth/session-edge'
 import { UnauthorizedView } from '@/components/auth/UnauthorizedView'
 
 export default async function SuperOnlyLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies()
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value
+  const token = cookieStore.get(ACCESS_COOKIE)?.value
   const session = token ? decodeSession(token) : null
 
-  if (session?.role !== 'super_admin') {
+  if (session?.role !== 'SuperAdmin') {
     return <UnauthorizedView requiredRole="Super Admin" />
   }
 

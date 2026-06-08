@@ -3,14 +3,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { AdminUser } from '@/lib/types/admin'
-import { loginAction, logoutAction } from '@/app/actions/auth'
+import { loginAction, logoutAction, refreshAction } from '@/app/actions/auth'
 
 type AdminAuthState = {
   admin: AdminUser | null
   isAuthenticated: boolean
   _hasHydrated: boolean
-  login: (email: string, password: string) => Promise<boolean>
+  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>
   logout: () => Promise<void>
+  refresh: () => Promise<boolean>
   setHasHydrated: (has: boolean) => void
 }
 
@@ -24,13 +25,20 @@ export const useAdminAuthStore = create<AdminAuthState>()(
         const result = await loginAction(email, password)
         if (result.ok) {
           set({ admin: result.admin, isAuthenticated: true })
-          return true
+          return { ok: true }
         }
-        return false
+        return { ok: false, error: result.error }
       },
       logout: async () => {
         await logoutAction()
         set({ admin: null, isAuthenticated: false })
+      },
+      refresh: async () => {
+        const ok = await refreshAction()
+        if (!ok) {
+          set({ admin: null, isAuthenticated: false })
+        }
+        return ok
       },
       setHasHydrated: (has) => set({ _hasHydrated: has }),
     }),

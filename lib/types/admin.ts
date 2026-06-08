@@ -3,7 +3,7 @@ export type AdminUser = {
   name: string
   email: string
   avatarUrl: string
-  role: 'super_admin' | 'content_manager' | 'moderator'
+  role: 'SuperAdmin' | 'ContentManager' | 'Moderator'
 }
 
 export type Permission =

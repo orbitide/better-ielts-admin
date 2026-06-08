@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { decodeSession, SESSION_COOKIE_NAME, SESSION_MAX_AGE } from '@/lib/auth/session-edge'
+import { decodeSession, ACCESS_COOKIE } from '@/lib/auth/session-edge'
 import { canAccessRoute } from '@/lib/auth/permissions'
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value
+  const token = request.cookies.get(ACCESS_COOKIE)?.value
   if (!token) {
     return NextResponse.redirect(
       new URL(`/login?redirect=${encodeURIComponent(pathname)}`, request.url)
@@ -16,7 +16,7 @@ export function middleware(request: NextRequest) {
   const session = decodeSession(token)
   if (!session) {
     const response = NextResponse.redirect(new URL('/login', request.url))
-    response.cookies.delete(SESSION_COOKIE_NAME)
+    response.cookies.delete(ACCESS_COOKIE)
     return response
   }
 
@@ -24,15 +24,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // Refresh cookie maxAge on each request (sliding session window)
-  const response = NextResponse.next()
-  response.cookies.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: SESSION_MAX_AGE,
-    path: '/',
-  })
-  return response
+  return NextResponse.next()
 }
 
 export const config = {

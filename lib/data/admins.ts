@@ -7,7 +7,7 @@ let admins: ManagedAdmin[] = [
     name: 'Super Admin',
     email: 'superadmin@betterielts.com',
     avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=SuperAdmin',
-    role: 'super_admin',
+    role: 'SuperAdmin',
     status: 'active',
   },
   {
@@ -15,7 +15,7 @@ let admins: ManagedAdmin[] = [
     name: 'Content Manager',
     email: 'content@betterielts.com',
     avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=ContentManager',
-    role: 'content_manager',
+    role: 'ContentManager',
     status: 'active',
   },
   {
@@ -23,7 +23,7 @@ let admins: ManagedAdmin[] = [
     name: 'Moderator',
     email: 'mod@betterielts.com',
     avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Moderator',
-    role: 'moderator',
+    role: 'Moderator',
     status: 'active',
   },
 ]

@@ -1,18 +1,68 @@
 'use client'
 
-import { Mail, Shield, User } from 'lucide-react'
+import { useState } from 'react'
+import { Mail, Shield, User, Lock } from 'lucide-react'
 import { useAdminAuthStore } from '@/lib/store/auth-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
 
 const roleLabels: Record<string, string> = {
-  super_admin: 'Super Admin',
-  content_manager: 'Content Manager',
-  moderator: 'Moderator',
+  SuperAdmin: 'Super Admin',
+  ContentManager: 'Content Manager',
+  Moderator: 'Moderator',
 }
 
 export default function ProfilePage() {
   const admin = useAdminAuthStore((s) => s.admin)
+
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [pwLoading, setPwLoading] = useState(false)
+  const [pwError, setPwError] = useState('')
+  const [pwSuccess, setPwSuccess] = useState('')
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPwError('')
+    setPwSuccess('')
+
+    if (newPassword !== confirmPassword) {
+      setPwError('Passwords do not match.')
+      return
+    }
+    if (newPassword.length < 8) {
+      setPwError('Password must be at least 8 characters.')
+      return
+    }
+
+    setPwLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/admin/auth/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+      })
+      const json = await res.json()
+      if (res.ok && json.success) {
+        setPwSuccess('Password changed successfully.')
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+      } else {
+        setPwError(json.message ?? 'Failed to change password.')
+      }
+    } catch {
+      setPwError('Unable to connect to server.')
+    } finally {
+      setPwLoading(false)
+    }
+  }
 
   return (
     <div className="p-5 sm:p-6 space-y-6 max-w-2xl mx-auto">
@@ -48,6 +98,53 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lock className="h-4 w-4" /> Change Password
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Current Password</label>
+              <Input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">New Password</label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Confirm New Password</label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="new-password"
+              />
+            </div>
+            {pwError && <p className="text-sm text-destructive">{pwError}</p>}
+            {pwSuccess && <p className="text-sm text-green-600">{pwSuccess}</p>}
+            <Button type="submit" disabled={pwLoading}>
+              {pwLoading ? 'Saving…' : 'Change Password'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

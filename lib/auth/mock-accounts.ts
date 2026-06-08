@@ -15,7 +15,7 @@ export const MOCK_ACCOUNTS: MockAccount[] = [
       name: 'Super Admin',
       email: 'superadmin@betterielts.com',
       avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=SuperAdmin',
-      role: 'super_admin',
+      role: 'SuperAdmin',
     },
   },
   {
@@ -26,7 +26,7 @@ export const MOCK_ACCOUNTS: MockAccount[] = [
       name: 'Content Manager',
       email: 'content@betterielts.com',
       avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=ContentManager',
-      role: 'content_manager',
+      role: 'ContentManager',
     },
   },
   {
@@ -37,10 +37,9 @@ export const MOCK_ACCOUNTS: MockAccount[] = [
       name: 'Moderator',
       email: 'mod@betterielts.com',
       avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Moderator',
-      role: 'moderator',
+      role: 'Moderator',
     },
   },
 ]
 
-// Alias for backward compatibility
 export const ADMIN_CREDENTIALS = MOCK_ACCOUNTS[0]
