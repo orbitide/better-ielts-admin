@@ -3,11 +3,20 @@ export type BlogPost = {
   title: string
   slug: string
   category: string
+  tags: string[]
   author: string
   status: 'published' | 'draft'
   publishedAt: string | null
   updatedAt: string
   excerpt: string
+  content: string
+}
+
+export type BlogCategory = {
+  id: string
+  name: string
+  slug: string
+  description: string
 }
 
 export type ExamGuideSection = {
