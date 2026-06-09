@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, BookMarked, Headphones, PenLine, Mic, Layers2, Brain,
   FileText, GraduationCap, BarChart2, MessageSquare, CreditCard, ChevronLeft, ChevronRight,
-  LogOut, User, Settings, ChevronUp, ShieldCheck,
+  LogOut, User, Settings, ChevronUp, ShieldCheck, KeyRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 import { useUIStore } from '@/lib/store/ui-store'
@@ -184,14 +184,24 @@ export function AdminSidebar() {
               Settings
             </Link>
             {admin?.role === 'SuperAdmin' && (
-              <Link
-                href="/settings/admins"
-                onClick={() => setProfileOpen(false)}
-                className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/60 w-full transition-colors"
-              >
-                <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                Admin Management
-              </Link>
+              <>
+                <Link
+                  href="/settings/admins"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/60 w-full transition-colors"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                  Admin Management
+                </Link>
+                <Link
+                  href="/settings/roles"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/60 w-full transition-colors"
+                >
+                  <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
+                  Role & Permissions
+                </Link>
+              </>
             )}
             <div className="my-1 border-t border-border" />
             <button

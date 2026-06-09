@@ -1,6 +1,8 @@
 'use server'
 
 import { cookies } from 'next/headers'
+import axios from 'axios'
+import serverApi from '@/lib/api/server'
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
@@ -9,19 +11,20 @@ import {
 } from '@/lib/auth/session'
 import type { AdminUser } from '@/lib/types/admin'
 
-const API_URL = process.env.API_URL ?? 'http://localhost:5000'
-
 type ApiTokenResponse = {
   success: boolean
   data?: {
-    accessToken: string
-    refreshToken: string
-    user: {
-      id: string
-      name: string
-      email: string
-      role: string
-      avatarUrl: string | null
+    mfaRequired: boolean
+    token: {
+      accessToken: string
+      refreshToken: string
+      user: {
+        id: string
+        name: string
+        email: string
+        role: string
+        avatarUrl: string | null
+      }
     }
   }
   message?: string
@@ -32,19 +35,16 @@ export async function loginAction(
   password: string
 ): Promise<{ ok: true; admin: AdminUser } | { ok: false; error: string }> {
   try {
-    const res = await fetch(`${API_URL}/api/admin/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+    const { data: json } = await serverApi.post<ApiTokenResponse>('/api/admin/auth/login', {
+      email,
+      password,
     })
 
-    const json: ApiTokenResponse = await res.json()
-
-    if (!res.ok || !json.success || !json.data) {
+    if (!json.success || !json.data?.token) {
       return { ok: false, error: json.message ?? 'Invalid email or password.' }
     }
 
-    const { accessToken, refreshToken, user } = json.data
+    const { accessToken, refreshToken, user } = json.data.token
     const cookieStore = await cookies()
 
     cookieStore.set(ACCESS_COOKIE, accessToken, {
@@ -69,7 +69,11 @@ export async function loginAction(
     }
 
     return { ok: true, admin }
-  } catch {
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      const json = err.response.data as ApiTokenResponse
+      return { ok: false, error: json.message ?? 'Invalid email or password.' }
+    }
     return { ok: false, error: 'Unable to connect to server. Please try again.' }
   }
 }
@@ -81,14 +85,11 @@ export async function logoutAction(): Promise<void> {
   if (refreshToken) {
     const accessToken = cookieStore.get(ACCESS_COOKIE)?.value
     try {
-      await fetch(`${API_URL}/api/admin/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({ refreshToken }),
-      })
+      await serverApi.post(
+        '/api/admin/auth/logout',
+        { refreshToken },
+        { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {} }
+      )
     } catch {
       // Ignore errors — clear cookies regardless
     }
@@ -104,16 +105,13 @@ export async function refreshAction(): Promise<boolean> {
   if (!refreshToken) return false
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
+    const { data: json } = await serverApi.post<ApiTokenResponse>('/api/admin/auth/refresh', {
+      refreshToken,
     })
 
-    const json: ApiTokenResponse = await res.json()
-    if (!res.ok || !json.success || !json.data) return false
+    if (!json.success || !json.data?.token) return false
 
-    const { accessToken, refreshToken: newRefreshToken } = json.data
+    const { accessToken, refreshToken: newRefreshToken } = json.data.token
     cookieStore.set(ACCESS_COOKIE, accessToken, {
       httpOnly: true,
       sameSite: 'lax',

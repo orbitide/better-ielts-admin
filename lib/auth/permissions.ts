@@ -33,6 +33,7 @@ export function hasPermission(role: AdminUser['role'], permission: Permission): 
 
 const ROUTE_ROLE_MAP: { prefix: string; roles: AdminUser['role'][] }[] = [
   { prefix: '/settings/admins', roles: ['SuperAdmin'] },
+  { prefix: '/settings/roles', roles: ['SuperAdmin'] },
 ]
 
 export function canAccessRoute(role: AdminUser['role'], pathname: string): boolean {

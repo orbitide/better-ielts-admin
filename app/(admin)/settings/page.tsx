@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Moon, Sun, ShieldCheck, ChevronRight } from 'lucide-react'
+import { Moon, Sun, ShieldCheck, KeyRound, ChevronRight } from 'lucide-react'
 import { useUIStore } from '@/lib/store/ui-store'
 import { useAdminAuthStore } from '@/lib/store/auth-store'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -55,7 +55,7 @@ export default function SettingsPage() {
             <CardTitle>Admin Management</CardTitle>
             <CardDescription>Manage admin accounts, roles, and review activity logs.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-2">
             <Link
               href="/settings/admins"
               className="flex items-center justify-between rounded-lg border border-border px-4 py-3 hover:bg-accent transition-colors group"
@@ -65,6 +65,19 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-sm font-medium">Manage Admins</p>
                   <p className="text-xs text-muted-foreground">Add admins, change roles, view audit log</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </Link>
+            <Link
+              href="/settings/roles"
+              className="flex items-center justify-between rounded-lg border border-border px-4 py-3 hover:bg-accent transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <KeyRound className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Role & Permissions</p>
+                  <p className="text-xs text-muted-foreground">Create roles, assign and revoke permissions</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />

@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
+import axios from 'axios'
+import clientApi from '@/lib/api/client'
 
 const roleLabels: Record<string, string> = {
   SuperAdmin: 'Super Admin',
@@ -42,14 +42,12 @@ export default function ProfilePage() {
 
     setPwLoading(true)
     try {
-      const res = await fetch(`${API_URL}/api/admin/auth/change-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+      const { data: json } = await clientApi.post('/api/admin/auth/change-password', {
+        currentPassword,
+        newPassword,
+        confirmPassword,
       })
-      const json = await res.json()
-      if (res.ok && json.success) {
+      if (json.success) {
         setPwSuccess('Password changed successfully.')
         setCurrentPassword('')
         setNewPassword('')
@@ -57,8 +55,12 @@ export default function ProfilePage() {
       } else {
         setPwError(json.message ?? 'Failed to change password.')
       }
-    } catch {
-      setPwError('Unable to connect to server.')
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        setPwError(err.response.data?.message ?? 'Failed to change password.')
+      } else {
+        setPwError('Unable to connect to server.')
+      }
     } finally {
       setPwLoading(false)
     }
