@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
+import { DataTable, type ColumnDef } from '@/components/ui/DataTable'
 import { fetchBlogCategories, createBlogCategory, updateBlogCategory, deleteBlogCategory } from '@/lib/api/blog'
 import type { BlogCategory } from '@/lib/types/content'
 import { BlogCategorySchema } from '@/lib/validations/blog'
@@ -109,6 +110,101 @@ export function BlogCategoryShell({ initialCategories }: Props) {
     }
   }
 
+  const columns: ColumnDef<BlogCategory>[] = [
+    {
+      accessorKey: 'name',
+      header: 'Name',
+      enableSorting: false,
+      cell: ({ row }) =>
+        editingId === row.original.id ? (
+          <Input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void commitEdit() } if (e.key === 'Escape') cancelEdit() }}
+            className="h-7 text-xs"
+            autoFocus
+            disabled={saving}
+          />
+        ) : (
+          <span className="font-medium">{row.original.name}</span>
+        ),
+    },
+    {
+      accessorKey: 'description',
+      header: 'Description',
+      enableSorting: false,
+      cell: ({ row }) =>
+        editingId === row.original.id ? (
+          <Input
+            value={editDesc}
+            onChange={(e) => setEditDesc(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void commitEdit() } if (e.key === 'Escape') cancelEdit() }}
+            placeholder="Description…"
+            className="h-7 text-xs"
+            disabled={saving}
+          />
+        ) : (
+          <span className="text-muted-foreground">{row.original.description || '—'}</span>
+        ),
+      meta: { className: 'hidden sm:table-cell' },
+    },
+    {
+      accessorKey: 'slug',
+      header: 'Slug',
+      enableSorting: false,
+      cell: ({ row }) =>
+        editingId === row.original.id ? (
+          <span className="text-muted-foreground font-mono text-xs">{toSlug(editName)}</span>
+        ) : (
+          <span className="text-muted-foreground font-mono text-xs">{row.original.slug}</span>
+        ),
+      meta: { className: 'hidden sm:table-cell' },
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      header: '',
+      cell: ({ row }) =>
+        editingId === row.original.id ? (
+          <div className="flex items-center gap-1 justify-end">
+            <button
+              onClick={() => void commitEdit()}
+              className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-muted-foreground hover:text-emerald-600 transition-colors disabled:opacity-50"
+              title="Save"
+              disabled={saving}
+            >
+              <Check className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={cancelEdit}
+              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              title="Cancel"
+              disabled={saving}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100">
+            <button
+              onClick={() => startEdit(row.original)}
+              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              title="Edit"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => setDeleteId(row.original.id)}
+              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ),
+    },
+  ]
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -183,95 +279,13 @@ export function BlogCategoryShell({ initialCategories }: Props) {
 
       <Card>
         <CardContent className="p-0">
-          {categories.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No categories yet.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Name</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden sm:table-cell">Description</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden sm:table-cell">Slug</th>
-                  <th className="w-20 px-4 py-2.5" />
-                </tr>
-              </thead>
-              <tbody>
-                {categories.map((cat) =>
-                  editingId === cat.id ? (
-                    <tr key={cat.id} className="border-b border-border last:border-0 bg-accent/20">
-                      <td className="px-3 py-2">
-                        <Input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void commitEdit() } if (e.key === 'Escape') cancelEdit() }}
-                          className="h-7 text-xs"
-                          autoFocus
-                          disabled={saving}
-                        />
-                      </td>
-                      <td className="px-3 py-2 hidden sm:table-cell">
-                        <Input
-                          value={editDesc}
-                          onChange={(e) => setEditDesc(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void commitEdit() } if (e.key === 'Escape') cancelEdit() }}
-                          placeholder="Description…"
-                          className="h-7 text-xs"
-                          disabled={saving}
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground font-mono text-xs hidden sm:table-cell">
-                        {toSlug(editName)}
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-1 justify-end">
-                          <button
-                            onClick={() => void commitEdit()}
-                            className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-muted-foreground hover:text-emerald-600 transition-colors disabled:opacity-50"
-                            title="Save"
-                            disabled={saving}
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                            title="Cancel"
-                            disabled={saving}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    <tr key={cat.id} className="border-b border-border last:border-0 hover:bg-accent/40 transition-colors group">
-                      <td className="px-4 py-2.5 font-medium">{cat.name}</td>
-                      <td className="px-4 py-2.5 text-muted-foreground hidden sm:table-cell">{cat.description || '—'}</td>
-                      <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs hidden sm:table-cell">{cat.slug}</td>
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-1 justify-end">
-                          <button
-                            onClick={() => startEdit(cat)}
-                            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
-                            title="Edit"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteId(cat.id)}
-                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={columns}
+            data={categories}
+            className="border-0 rounded-none"
+            getRowClassName={(row) => editingId === row.id ? 'bg-accent/20' : 'group'}
+            emptyMessage="No categories yet."
+          />
         </CardContent>
       </Card>
 

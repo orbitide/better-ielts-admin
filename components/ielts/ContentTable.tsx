@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { DataTable, DataTableToolbar, type ColumnDef } from '@/components/ui/DataTable'
 import type { IeltsStatus } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
 
@@ -69,6 +70,70 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
     setDeleteTarget(null)
   }
 
+  const columns: ColumnDef<ContentRow>[] = [
+    {
+      accessorKey: 'title',
+      header: 'Title',
+      cell: ({ row }) => <span className="font-medium max-w-xs truncate block">{row.original.title}</span>,
+    },
+    {
+      accessorKey: 'meta',
+      header: 'Details',
+      enableSorting: false,
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.meta}</span>,
+      meta: { className: 'hidden sm:table-cell' },
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={statusVariant[row.original.status]}>{row.original.status}</Badge>
+      ),
+    },
+    {
+      accessorKey: 'createdAt',
+      header: 'Created',
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.createdAt}</span>,
+      meta: { className: 'hidden md:table-cell' },
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      header: '',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1 justify-end">
+          {manageHrefPrefix && (
+            <Link
+              href={`${manageHrefPrefix}/${row.original.id}`}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors inline-flex"
+              title="Manage content"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+            </Link>
+          )}
+          <RoleGate permission="ielts:edit">
+            <button
+              onClick={() => onEdit(row.original)}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              title="Edit metadata"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          </RoleGate>
+          <RoleGate permission="ielts:delete">
+            <button
+              onClick={() => setDeleteTarget(row.original)}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </RoleGate>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="p-5 sm:p-6 space-y-5 max-w-5xl mx-auto">
       <PageHeader title={title} description={description}>
@@ -80,75 +145,16 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
         </RoleGate>
       </PageHeader>
 
-      <div className="flex items-center gap-3 flex-wrap">
+      <DataTableToolbar>
         <SearchInput value={query} onChange={setQuery} placeholder={`Search ${title.toLowerCase()}…`} className="max-w-xs" />
         {filterSlot}
-      </div>
+      </DataTableToolbar>
 
-      <div className="rounded-xl border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">Title</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden sm:table-cell">Details</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">Status</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden md:table-cell">Created</th>
-              <th className="px-4 py-2.5" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center py-10 text-muted-foreground text-sm">
-                  No items found.
-                </td>
-              </tr>
-            ) : (
-              filtered.map((row) => (
-                <tr key={row.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-medium max-w-xs truncate">{row.title}</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{row.meta}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={statusVariant[row.status]}>{row.status}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{row.createdAt}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 justify-end">
-                      {manageHrefPrefix && (
-                        <Link
-                          href={`${manageHrefPrefix}/${row.id}`}
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                          title="Manage content"
-                        >
-                          <Settings2 className="h-3.5 w-3.5" />
-                        </Link>
-                      )}
-                      <RoleGate permission="ielts:edit">
-                        <button
-                          onClick={() => onEdit(row)}
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                          title="Edit metadata"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                      </RoleGate>
-                      <RoleGate permission="ielts:delete">
-                        <button
-                          onClick={() => setDeleteTarget(row)}
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </RoleGate>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={filtered}
+        emptyMessage="No items found."
+      />
 
       <p className="text-xs text-muted-foreground">{filtered.length} of {rows.length} items</p>
 

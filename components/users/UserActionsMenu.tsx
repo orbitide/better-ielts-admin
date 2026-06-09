@@ -17,11 +17,16 @@ type Props = {
 
 export function UserActionsMenu({ user, suspended, banned, onEdit, onDelete, onBan, onToggleStatus }: Props) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [menuStyle, setMenuStyle] = useState<{ top: number; right: number }>({ top: 0, right: 0 })
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(e.target as Node)
+      ) {
         setOpen(false)
       }
     }
@@ -29,14 +34,26 @@ export function UserActionsMenu({ user, suspended, banned, onEdit, onDelete, onB
     return () => document.removeEventListener('mousedown', handleMouseDown)
   }, [open])
 
+  function handleToggle() {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setMenuStyle({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      })
+    }
+    setOpen((v) => !v)
+  }
+
   function close() {
     setOpen(false)
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div>
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={buttonRef}
+        onClick={handleToggle}
         className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
         aria-label="User actions"
       >
@@ -44,7 +61,11 @@ export function UserActionsMenu({ user, suspended, banned, onEdit, onDelete, onB
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-1 w-44 rounded-xl border border-border bg-card shadow-xl z-20 py-1 text-sm">
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: menuStyle.top, right: menuStyle.right }}
+          className="w-44 rounded-xl border border-border bg-card shadow-xl z-50 py-1 text-sm"
+        >
           <Link
             href={`/users/${user.id}`}
             onClick={close}

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
+import { DataTable, type ColumnDef } from '@/components/ui/DataTable'
 import { AddAdminModal } from './AddAdminModal'
 import { useAdminAuthStore } from '@/lib/store/auth-store'
 import type { ManagedAdmin, AuditLogEntry } from '@/lib/types/admin'
@@ -72,6 +73,75 @@ export function AdminsManagementShell({ initialAdmins, initialLog }: Props) {
     addEntry(`Added new admin account: ${newAdmin.name} (${roleLabels[newAdmin.role]})`)
   }
 
+  const adminColumns: ColumnDef<ManagedAdmin>[] = [
+    {
+      accessorKey: 'name',
+      header: 'Admin',
+      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+    },
+    {
+      accessorKey: 'email',
+      header: 'Email',
+      enableSorting: false,
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.email}</span>,
+      meta: { className: 'hidden sm:table-cell' },
+    },
+    {
+      accessorKey: 'role',
+      header: 'Role',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const isSelf = row.original.id === currentAdmin?.id
+        return isSelf ? (
+          <Badge variant={roleBadgeVariant[row.original.role]}>{roleLabels[row.original.role]}</Badge>
+        ) : (
+          <Select
+            value={row.original.role}
+            onChange={(e) => handleRoleChange(row.original.id, e.target.value as ManagedAdmin['role'])}
+            className="text-xs h-7 py-0.5"
+          >
+            <option value="SuperAdmin">Super Admin</option>
+            <option value="ContentManager">Content Manager</option>
+            <option value="Moderator">Moderator</option>
+          </Select>
+        )
+      },
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={row.original.status === 'active' ? 'success' : 'secondary'}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      header: '',
+      cell: ({ row }) => {
+        const isSelf = row.original.id === currentAdmin?.id
+        return (
+          <div className="flex justify-end">
+            {!isSelf && (
+              <button
+                onClick={() => handleToggleStatus(row.original.id)}
+                className={`text-xs rounded-md px-2 py-1 border transition-colors ${
+                  row.original.status === 'active'
+                    ? 'border-border text-muted-foreground hover:border-red-300 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
+                    : 'border-border text-muted-foreground hover:border-green-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                }`}
+              >
+                {row.original.status === 'active' ? 'Disable' : 'Enable'}
+              </button>
+            )}
+          </div>
+        )
+      },
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <Card>
@@ -86,64 +156,11 @@ export function AdminsManagementShell({ initialAdmins, initialLog }: Props) {
           </Button>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">Admin</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden sm:table-cell">Email</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">Role</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">Status</th>
-                  <th className="px-4 py-2.5" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {admins.map((admin) => {
-                  const isSelf = admin.id === currentAdmin?.id
-                  return (
-                    <tr key={admin.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium">{admin.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{admin.email}</td>
-                      <td className="px-4 py-3">
-                        {isSelf ? (
-                          <Badge variant={roleBadgeVariant[admin.role]}>{roleLabels[admin.role]}</Badge>
-                        ) : (
-                          <Select
-                            value={admin.role}
-                            onChange={(e) => handleRoleChange(admin.id, e.target.value as ManagedAdmin['role'])}
-                            className="text-xs h-7 py-0.5"
-                          >
-                            <option value="SuperAdmin">Super Admin</option>
-                            <option value="ContentManager">Content Manager</option>
-                            <option value="Moderator">Moderator</option>
-                          </Select>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={admin.status === 'active' ? 'success' : 'secondary'}>
-                          {admin.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {!isSelf && (
-                          <button
-                            onClick={() => handleToggleStatus(admin.id)}
-                            className={`text-xs rounded-md px-2 py-1 border transition-colors ${
-                              admin.status === 'active'
-                                ? 'border-border text-muted-foreground hover:border-red-300 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
-                                : 'border-border text-muted-foreground hover:border-green-300 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
-                            }`}
-                          >
-                            {admin.status === 'active' ? 'Disable' : 'Enable'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={adminColumns}
+            data={admins}
+            className="border-0 rounded-none"
+          />
         </CardContent>
       </Card>
 

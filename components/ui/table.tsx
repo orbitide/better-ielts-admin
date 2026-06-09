@@ -24,7 +24,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
 function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
   return (
     <tr
-      className={cn('hover:bg-muted/30 transition-colors data-[state=selected]:bg-muted', className)}
+      className={cn('h-14 hover:bg-muted/30 transition-colors data-[state=selected]:bg-muted', className)}
       {...props}
     />
   )

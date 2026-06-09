@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Select'
@@ -11,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { UserAvatar } from '@/components/users/UserAvatar'
 import { UserActionsMenu } from '@/components/users/UserActionsMenu'
 import { EditUserModal } from '@/components/users/EditUserModal'
+import { DataTable, DataTableToolbar, DataTablePagination, type ColumnDef } from '@/components/ui/DataTable'
 import type { User } from '@/lib/types/user'
 
 const PAGE_SIZE = 10
@@ -72,9 +72,78 @@ export function UsersTable({ users }: { users: User[] }) {
     setBanTarget(null)
   }
 
+  const columns: ColumnDef<User>[] = [
+    {
+      accessorKey: 'name',
+      header: 'User',
+      cell: ({ row }) => (
+        <Link href={`/users/${row.original.id}`} className="flex items-center gap-2.5 group">
+          <UserAvatar name={row.original.name} size="sm" />
+          <div className="min-w-0">
+            <p className="font-medium group-hover:text-primary transition-colors leading-none">{row.original.name}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">{row.original.email}</p>
+          </div>
+        </Link>
+      ),
+    },
+    {
+      accessorKey: 'currentBand',
+      header: 'Band',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <>
+          <span className="font-mono font-semibold text-primary">{row.original.currentBand.overall}</span>
+          <span className="text-muted-foreground text-xs ml-1">/ target {row.original.targetBand}</span>
+        </>
+      ),
+      meta: { className: 'hidden md:table-cell' },
+    },
+    {
+      accessorKey: 'plan',
+      header: 'Plan',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge variant={planVariant[row.original.plan]}>{row.original.plan}</Badge>
+          {suspended.has(row.original.id) && <Badge variant="warning">suspended</Badge>}
+          {banned.has(row.original.id) && <Badge variant="destructive">banned</Badge>}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'totalStudyHours',
+      header: 'Hours',
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.totalStudyHours}h</span>,
+      meta: { className: 'hidden sm:table-cell' },
+    },
+    {
+      accessorKey: 'joinedAt',
+      header: 'Joined',
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.joinedAt}</span>,
+      meta: { className: 'hidden lg:table-cell' },
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      header: '',
+      cell: ({ row }) => (
+        <div className="flex justify-end">
+          <UserActionsMenu
+            user={row.original}
+            suspended={suspended.has(row.original.id)}
+            banned={banned.has(row.original.id)}
+            onEdit={setEditTarget}
+            onDelete={setDeleteTarget}
+            onBan={setBanTarget}
+            onToggleStatus={(u) => setSuspended((prev) => toggleSet(prev, u.id))}
+          />
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <DataTableToolbar>
         <SearchInput
           value={query}
           onChange={setQuery}
@@ -87,100 +156,24 @@ export function UsersTable({ users }: { users: User[] }) {
           <option value="pro">Pro</option>
           <option value="elite">Elite</option>
         </Select>
-      </div>
+      </DataTableToolbar>
 
-      <div className="rounded-xl border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">User</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden md:table-cell">Band</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs">Plan</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden sm:table-cell">Hours</th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs hidden lg:table-cell">Joined</th>
-              <th className="px-4 py-2.5 font-medium text-muted-foreground text-xs text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {paginated.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-center py-10 text-muted-foreground">
-                  No users found.
-                </td>
-              </tr>
-            ) : (
-              paginated.map((user) => (
-                <tr key={user.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <Link href={`/users/${user.id}`} className="flex items-center gap-2.5 group">
-                      <UserAvatar name={user.name} size="sm" />
-                      <div className="min-w-0">
-                        <p className="font-medium group-hover:text-primary transition-colors leading-none">{user.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{user.email}</p>
-                      </div>
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <span className="font-mono font-semibold text-primary">{user.currentBand.overall}</span>
-                    <span className="text-muted-foreground text-xs ml-1">/ target {user.targetBand}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <Badge variant={planVariant[user.plan]}>{user.plan}</Badge>
-                      {suspended.has(user.id) && <Badge variant="warning">suspended</Badge>}
-                      {banned.has(user.id) && <Badge variant="destructive">banned</Badge>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{user.totalStudyHours}h</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{user.joinedAt}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end">
-                      <UserActionsMenu
-                        user={user}
-                        suspended={suspended.has(user.id)}
-                        banned={banned.has(user.id)}
-                        onEdit={setEditTarget}
-                        onDelete={setDeleteTarget}
-                        onBan={setBanTarget}
-                        onToggleStatus={(u) => setSuspended((prev) => toggleSet(prev, u.id))}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={paginated}
+        emptyMessage="No users found."
 
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">{filtered.length} of {localUsers.length} users</p>
-        {totalPages > 1 && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => p - 1)}
-              disabled={page === 1}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs border border-border hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              Previous
-            </button>
-            <span className="text-xs text-muted-foreground px-1">
-              Page {page} of {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page === totalPages}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs border border-border hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
-      </div>
+      />
 
-      {/* Edit modal */}
+      <DataTablePagination
+        page={page}
+        totalPages={totalPages}
+        totalCount={filtered.length}
+        sourceCount={localUsers.length}
+        onPageChange={setPage}
+        countLabel={`${filtered.length} of ${localUsers.length} users`}
+      />
+
       <EditUserModal
         open={editTarget !== null}
         onClose={() => setEditTarget(null)}
@@ -188,7 +181,6 @@ export function UsersTable({ users }: { users: User[] }) {
         onSave={handleEdit}
       />
 
-      {/* Delete confirmation modal */}
       <Modal
         open={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
@@ -203,7 +195,6 @@ export function UsersTable({ users }: { users: User[] }) {
         </div>
       </Modal>
 
-      {/* Ban confirmation modal */}
       <Modal
         open={banTarget !== null}
         onClose={() => setBanTarget(null)}

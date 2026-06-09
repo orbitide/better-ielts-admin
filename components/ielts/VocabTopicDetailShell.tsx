@@ -10,6 +10,7 @@ import { Breadcrumb } from './Breadcrumb'
 import { VocabWordFormModal } from './VocabWordFormModal'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
+import { DataTable, type ColumnDef } from '@/components/ui/DataTable'
 import type { FullVocabTopic, VocabWord, IeltsStatus } from '@/lib/types/ielts'
 import { updateVocabTopic } from '@/lib/api/ielts'
 
@@ -83,6 +84,62 @@ export function VocabTopicDetailShell({ topic: initial }: VocabTopicDetailShellP
   const openAddWord = () => { setEditingWord(null); setWordModalOpen(true) }
   const openEditWord = (word: VocabWord) => { setEditingWord(word); setWordModalOpen(true) }
 
+  const wordColumns: ColumnDef<VocabWord>[] = [
+    {
+      accessorKey: 'word',
+      header: 'Word',
+      cell: ({ row }) => <span className="font-medium">{row.original.word}</span>,
+    },
+    {
+      accessorKey: 'phonetic',
+      header: 'Phonetic',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground font-mono text-xs">{row.original.phonetic || '—'}</span>
+      ),
+      meta: { className: 'hidden sm:table-cell' },
+    },
+    {
+      accessorKey: 'difficulty',
+      header: 'Level',
+      cell: ({ row }) => (
+        <Badge variant={difficultyVariant[row.original.difficulty]} className="text-xs">
+          {row.original.difficulty}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: 'definitions',
+      header: 'Defs',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.definitions.length}</span>
+      ),
+      meta: { className: 'hidden md:table-cell' },
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      header: '',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1 justify-end">
+          <button
+            onClick={() => openEditWord(row.original)}
+            className="rounded-md px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => setDeleteTarget(row.original)}
+            className="rounded-md px-2.5 py-1 text-xs text-muted-foreground hover:bg-red-100 hover:text-red-600 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <>
       <div className="p-5 sm:p-6 space-y-6 max-w-3xl mx-auto">
@@ -124,49 +181,11 @@ export function VocabTopicDetailShell({ topic: initial }: VocabTopicDetailShellP
               </button>
             </div>
           ) : (
-            <div className="rounded-xl border border-border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40">
-                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs uppercase tracking-wide">Word</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs uppercase tracking-wide hidden sm:table-cell">Phonetic</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs uppercase tracking-wide">Level</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-xs uppercase tracking-wide hidden md:table-cell">Defs</th>
-                    <th className="px-4 py-2.5" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {topic.words.map((word) => (
-                    <tr key={word.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium">{word.word}</td>
-                      <td className="px-4 py-3 text-muted-foreground font-mono text-xs hidden sm:table-cell">{word.phonetic || '—'}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant={difficultyVariant[word.difficulty]} className="text-xs">
-                          {word.difficulty}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{word.definitions.length}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 justify-end">
-                          <button
-                            onClick={() => openEditWord(word)}
-                            className="rounded-md px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(word)}
-                            className="rounded-md px-2.5 py-1 text-xs text-muted-foreground hover:bg-red-100 hover:text-red-600 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={wordColumns}
+              data={topic.words}
+              emptyMessage="No words yet."
+            />
           )}
         </div>
       </div>
