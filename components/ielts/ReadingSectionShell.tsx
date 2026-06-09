@@ -10,6 +10,7 @@ import { ReadingQuestionFormModal } from './ReadingQuestionFormModal'
 import { QuestionsDataTable } from './QuestionsDataTable'
 import type { FullReadingTest, ReadingSection, ReadingQuestion, SetContext } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
+import { updateReadingTest } from '@/lib/api/ielts'
 
 const typeLabels: Record<ReadingQuestion['type'], string> = {
   mcq: 'MCQ',
@@ -43,21 +44,34 @@ export function ReadingSectionShell({ test, section: initialSection, setContext 
   const [editingQuestion, setEditingQuestion] = useState<ReadingQuestion | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ReadingQuestion | null>(null)
 
-  const handleQuestionSave = (q: ReadingQuestion) => {
+  const persistTestWith = async (updatedSection: ReadingSection) => {
+    const updatedTest = { ...test, sections: test.sections.map(s => s.id === updatedSection.id ? updatedSection : s) }
+    try { await updateReadingTest(test.id, updatedTest) } catch { /* best-effort */ }
+  }
+
+  const handleQuestionSave = async (q: ReadingQuestion) => {
     setSection((prev) => {
       const existing = prev.questions.findIndex((x) => x.id === q.id)
+      let updatedSection: ReadingSection
       if (existing >= 0) {
         const updated = [...prev.questions]
         updated[existing] = q
-        return { ...prev, questions: updated }
+        updatedSection = { ...prev, questions: updated }
+      } else {
+        updatedSection = { ...prev, questions: [...prev.questions, q] }
       }
-      return { ...prev, questions: [...prev.questions, q] }
+      persistTestWith(updatedSection)
+      return updatedSection
     })
   }
 
-  const handleDeleteQuestion = () => {
+  const handleDeleteQuestion = async () => {
     if (!deleteTarget) return
-    setSection((prev) => ({ ...prev, questions: prev.questions.filter((q) => q.id !== deleteTarget.id) }))
+    setSection((prev) => {
+      const updatedSection = { ...prev, questions: prev.questions.filter((q) => q.id !== deleteTarget.id) }
+      persistTestWith(updatedSection)
+      return updatedSection
+    })
     setDeleteTarget(null)
   }
 

@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
 import { ImagePickerField } from '@/components/media/ImagePickerField'
 import type { FullWritingTask, IeltsStatus, SetContext } from '@/lib/types/ielts'
+import { updateWritingTask } from '@/lib/api/ielts'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
   published: 'success',
@@ -38,9 +39,13 @@ export function WritingTaskDetailShell({ task: initial, setContext }: WritingTas
     setDirty(false)
   }
 
-  const handleSave = () => {
-    setDirty(false)
-    // In production this would POST to an API
+  const handleSave = async () => {
+    try {
+      await updateWritingTask(task.id, task)
+      setDirty(false)
+    } catch {
+      // keep dirty state so user can retry
+    }
   }
 
   return (

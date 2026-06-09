@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
 import { Breadcrumb } from './Breadcrumb'
 import type { FullIeltsTest, IeltsStatus, MockTestSection } from '@/lib/types/ielts'
+import { updateTestInSet } from '@/lib/api/ielts'
 
 const skillConfig = {
   reading: { label: 'Reading', icon: BookMarked, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
@@ -57,12 +58,14 @@ export function TestDetailShell({ setId, setTitle, test: initial, availableSkill
     setDraftId(section.testId)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!changingSection) return
-    setSections((prev) =>
-      prev.map((s) => s.id === changingSection.id ? { ...s, testId: draftId } : s)
-    )
+    const updatedSections = sections.map((s) => s.id === changingSection.id ? { ...s, testId: draftId } : s)
+    setSections(updatedSections)
     setChangingSection(null)
+    try {
+      await updateTestInSet(initial.id, setId, { ...initial, sections: updatedSections })
+    } catch { /* best-effort */ }
   }
 
   const contextParams = () =>

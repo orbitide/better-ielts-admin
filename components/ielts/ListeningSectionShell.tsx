@@ -10,6 +10,7 @@ import { ListeningQuestionFormModal } from './ListeningQuestionFormModal'
 import { QuestionsDataTable } from './QuestionsDataTable'
 import type { FullListeningTest, ListeningSection, ListeningQuestion, SetContext } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
+import { updateListeningTest } from '@/lib/api/ielts'
 
 const typeLabels: Record<ListeningQuestion['type'], string> = {
   mcq: 'MCQ',
@@ -46,26 +47,41 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
   const [editingQuestion, setEditingQuestion] = useState<ListeningQuestion | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ListeningQuestion | null>(null)
 
-  const handleTranscriptSave = () => {
-    setSection((prev) => ({ ...prev, transcript }))
-    setTranscriptDirty(false)
+  const persistTestWith = async (updatedSection: ListeningSection) => {
+    const updatedTest = { ...test, sections: test.sections.map(s => s.id === updatedSection.id ? updatedSection : s) }
+    try { await updateListeningTest(test.id, updatedTest) } catch { /* best-effort */ }
   }
 
-  const handleQuestionSave = (q: ListeningQuestion) => {
+  const handleTranscriptSave = async () => {
+    const updatedSection = { ...section, transcript }
+    setSection(updatedSection)
+    setTranscriptDirty(false)
+    await persistTestWith(updatedSection)
+  }
+
+  const handleQuestionSave = async (q: ListeningQuestion) => {
     setSection((prev) => {
       const existing = prev.questions.findIndex((x) => x.id === q.id)
+      let updatedSection: ListeningSection
       if (existing >= 0) {
         const updated = [...prev.questions]
         updated[existing] = q
-        return { ...prev, questions: updated }
+        updatedSection = { ...prev, questions: updated }
+      } else {
+        updatedSection = { ...prev, questions: [...prev.questions, q] }
       }
-      return { ...prev, questions: [...prev.questions, q] }
+      persistTestWith(updatedSection)
+      return updatedSection
     })
   }
 
-  const handleDeleteQuestion = () => {
+  const handleDeleteQuestion = async () => {
     if (!deleteTarget) return
-    setSection((prev) => ({ ...prev, questions: prev.questions.filter((q) => q.id !== deleteTarget.id) }))
+    setSection((prev) => {
+      const updatedSection = { ...prev, questions: prev.questions.filter((q) => q.id !== deleteTarget.id) }
+      persistTestWith(updatedSection)
+      return updatedSection
+    })
     setDeleteTarget(null)
   }
 

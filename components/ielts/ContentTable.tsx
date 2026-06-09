@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import { Pencil, Trash2, Plus, Settings2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -26,6 +27,7 @@ type ContentTableProps = {
   initialRows: ContentRow[]
   onNew: () => void
   onEdit: (row: ContentRow) => void
+  onApiDelete?: (id: string) => Promise<void>
   manageHrefPrefix?: string
   filterSlot?: ReactNode
 }
@@ -36,19 +38,34 @@ const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = 
   archived: 'secondary',
 }
 
-export function ContentTable({ title, description, initialRows, onNew, onEdit, manageHrefPrefix, filterSlot }: ContentTableProps) {
+export function ContentTable({ title, description, initialRows, onNew, onEdit, onApiDelete, manageHrefPrefix, filterSlot }: ContentTableProps) {
   const [rows, setRows] = useState(initialRows)
   const [query, setQuery] = useState('')
   const [, startTransition] = useTransition()
   const [deleteTarget, setDeleteTarget] = useState<ContentRow | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const router = useRouter()
 
   const filtered = rows.filter((r) =>
     r.title.toLowerCase().includes(query.toLowerCase())
   )
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return
-    startTransition(() => setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id)))
+    if (onApiDelete) {
+      setDeleting(true)
+      try {
+        await onApiDelete(deleteTarget.id)
+        startTransition(() => setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id)))
+        router.refresh()
+      } catch {
+        // leave rows unchanged on error
+      } finally {
+        setDeleting(false)
+      }
+    } else {
+      startTransition(() => setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id)))
+    }
     setDeleteTarget(null)
   }
 
@@ -141,7 +158,9 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, m
         </p>
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-          <Button variant="destructive" size="sm" onClick={handleDelete}>Delete</Button>
+          <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+            {deleting ? 'Deleting…' : 'Delete'}
+          </Button>
         </div>
       </Modal>
     </div>

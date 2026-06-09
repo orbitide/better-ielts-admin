@@ -64,6 +64,28 @@ export type VocabTopic = {
   createdAt: string
 }
 
+export type VocabWordDefinition = {
+  partOfSpeech: string
+  meaning: string
+  exampleSentence: string
+}
+
+export type VocabWord = {
+  id: string
+  word: string
+  phonetic: string
+  definitions: VocabWordDefinition[]
+  synonyms: string[]
+  difficulty: 'beginner' | 'intermediate' | 'advanced'
+  isLearned: boolean
+}
+
+export type FullVocabTopic = VocabTopic & {
+  description: string
+  iconName: string
+  words: VocabWord[]
+}
+
 // ─── Shared question option shapes ───────────────────────────────────────────
 
 export type McqOption = { label: string; text: string }
@@ -156,7 +178,8 @@ export type FullListeningTest = ListeningTest & {
 
 export type FullWritingTask = WritingTask & {
   imageUrl?: string
-  sampleAnswer: string
+  imageAlt?: string
+  sampleAnswer?: string
 }
 
 // ─── Speaking nested types ────────────────────────────────────────────────────

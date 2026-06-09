@@ -1,6 +1,9 @@
+import { revalidatePath } from 'next/cache'
 import { getReadingTests, getIeltsSets, getFullIeltsSet } from '@/lib/data/ielts'
+import { createReadingTest, fetchReadingTestById, updateReadingTest, deleteReadingTest } from '@/lib/api/ielts'
 import { IeltsContentShell, type SetFilterOption } from '@/components/ielts/IeltsContentShell'
 import type { ContentRow } from '@/components/ielts/ContentTable'
+import type { IeltsStatus } from '@/lib/types/ielts'
 
 export const metadata = { title: 'Reading Tests' }
 
@@ -32,6 +35,26 @@ export default async function ReadingPage() {
     createdAt: t.createdAt,
   }))
 
+  async function onCreate(data: { title: string; type: string }) {
+    'use server'
+    const test = await createReadingTest({ title: data.title, type: data.type })
+    revalidatePath('/ielts/reading')
+    return { id: test.id, createdAt: test.createdAt }
+  }
+
+  async function onUpdate(id: string, data: { title: string; type: string; status: IeltsStatus }) {
+    'use server'
+    const current = await fetchReadingTestById(id)
+    await updateReadingTest(id, { ...current, title: data.title, type: data.type as 'academic' | 'general', status: data.status })
+    revalidatePath('/ielts/reading')
+  }
+
+  async function onDelete(id: string) {
+    'use server'
+    await deleteReadingTest(id)
+    revalidatePath('/ielts/reading')
+  }
+
   return (
     <IeltsContentShell
       title="Reading Tests"
@@ -41,6 +64,9 @@ export default async function ReadingPage() {
       typeLabel="Test Type"
       manageHrefPrefix="/ielts/reading"
       setFilters={setFilters}
+      onApiCreate={onCreate}
+      onApiUpdate={onUpdate}
+      onApiDelete={onDelete}
     />
   )
 }

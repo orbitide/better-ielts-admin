@@ -1,6 +1,9 @@
+import { revalidatePath } from 'next/cache'
 import { getWritingTasks, getIeltsSets, getFullIeltsSet } from '@/lib/data/ielts'
+import { createWritingTask, fetchWritingTaskById, updateWritingTask, deleteWritingTask } from '@/lib/api/ielts'
 import { IeltsContentShell, type SetFilterOption } from '@/components/ielts/IeltsContentShell'
 import type { ContentRow } from '@/components/ielts/ContentTable'
+import type { IeltsStatus } from '@/lib/types/ielts'
 
 export const metadata = { title: 'Writing Tasks' }
 
@@ -32,6 +35,26 @@ export default async function WritingPage() {
     createdAt: t.createdAt,
   }))
 
+  async function onCreate(data: { title: string; type: string }) {
+    'use server'
+    const task = await createWritingTask({ title: data.title, type: data.type })
+    revalidatePath('/ielts/writing')
+    return { id: task.id, createdAt: task.createdAt }
+  }
+
+  async function onUpdate(id: string, data: { title: string; type: string; status: IeltsStatus }) {
+    'use server'
+    const current = await fetchWritingTaskById(id)
+    await updateWritingTask(id, { ...current, title: data.title, type: data.type as 'task1' | 'task2', status: data.status })
+    revalidatePath('/ielts/writing')
+  }
+
+  async function onDelete(id: string) {
+    'use server'
+    await deleteWritingTask(id)
+    revalidatePath('/ielts/writing')
+  }
+
   return (
     <IeltsContentShell
       title="Writing Tasks"
@@ -41,6 +64,9 @@ export default async function WritingPage() {
       typeLabel="Task Type"
       manageHrefPrefix="/ielts/writing"
       setFilters={setFilters}
+      onApiCreate={onCreate}
+      onApiUpdate={onUpdate}
+      onApiDelete={onDelete}
     />
   )
 }

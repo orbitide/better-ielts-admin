@@ -1,6 +1,9 @@
+import { revalidatePath } from 'next/cache'
 import { getSpeakingSessions, getIeltsSets, getFullIeltsSet } from '@/lib/data/ielts'
+import { createSpeakingSession, fetchSpeakingSessionById, updateSpeakingSession, deleteSpeakingSession } from '@/lib/api/ielts'
 import { IeltsContentShell, type SetFilterOption } from '@/components/ielts/IeltsContentShell'
 import type { ContentRow } from '@/components/ielts/ContentTable'
+import type { IeltsStatus } from '@/lib/types/ielts'
 
 export const metadata = { title: 'Speaking Sessions' }
 
@@ -32,6 +35,26 @@ export default async function SpeakingPage() {
     createdAt: s.createdAt,
   }))
 
+  async function onCreate(data: { title: string; type: string }) {
+    'use server'
+    const session = await createSpeakingSession({ title: data.title })
+    revalidatePath('/ielts/speaking')
+    return { id: session.id, createdAt: session.createdAt }
+  }
+
+  async function onUpdate(id: string, data: { title: string; type: string; status: IeltsStatus }) {
+    'use server'
+    const current = await fetchSpeakingSessionById(id)
+    await updateSpeakingSession(id, { ...current, title: data.title, status: data.status })
+    revalidatePath('/ielts/speaking')
+  }
+
+  async function onDelete(id: string) {
+    'use server'
+    await deleteSpeakingSession(id)
+    revalidatePath('/ielts/speaking')
+  }
+
   return (
     <IeltsContentShell
       title="Speaking Sessions"
@@ -41,6 +64,9 @@ export default async function SpeakingPage() {
       typeLabel="Format"
       manageHrefPrefix="/ielts/speaking"
       setFilters={setFilters}
+      onApiCreate={onCreate}
+      onApiUpdate={onUpdate}
+      onApiDelete={onDelete}
     />
   )
 }

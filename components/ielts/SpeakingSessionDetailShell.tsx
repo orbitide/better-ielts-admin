@@ -9,6 +9,7 @@ import { ContentFormModal } from './ContentFormModal'
 import { SpeakingPartCard } from './SpeakingPartCard'
 import { Breadcrumb } from './Breadcrumb'
 import type { FullSpeakingSession, SpeakingPart, IeltsStatus, SetContext } from '@/lib/types/ielts'
+import { updateSpeakingSession } from '@/lib/api/ielts'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
   published: 'success',
@@ -25,15 +26,16 @@ export function SpeakingSessionDetailShell({ session: initial, setContext }: Spe
   const [session, setSession] = useState(initial)
   const [metaModalOpen, setMetaModalOpen] = useState(false)
 
-  const handleMetaSave = ({ title, status }: { title: string; type: string; status: IeltsStatus }) => {
-    setSession((prev) => ({ ...prev, title, status }))
+  const handleMetaSave = async ({ title, status }: { title: string; type: string; status: IeltsStatus }) => {
+    const updated = { ...session, title, status }
+    setSession(updated)
+    try { await updateSpeakingSession(session.id, updated) } catch { setSession(session) }
   }
 
-  const handlePartUpdate = (updatedPart: SpeakingPart) => {
-    setSession((prev) => ({
-      ...prev,
-      parts: prev.parts.map((p) => (p.part === updatedPart.part ? updatedPart : p)),
-    }))
+  const handlePartUpdate = async (updatedPart: SpeakingPart) => {
+    const updated = { ...session, parts: session.parts.map((p) => (p.part === updatedPart.part ? updatedPart : p)) }
+    setSession(updated)
+    try { await updateSpeakingSession(session.id, updated) } catch { setSession(session) }
   }
 
   const sortedParts = [...session.parts].sort((a, b) => a.part - b.part)

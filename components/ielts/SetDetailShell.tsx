@@ -5,9 +5,13 @@ import Link from 'next/link'
 import { Pencil, Plus, Settings2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Modal } from '@/components/ui/Modal'
+import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
+import { MockTestFormModal } from './MockTestFormModal'
 import type { FullIeltsSet, FullIeltsTest, IeltsStatus } from '@/lib/types/ielts'
+import { updateIeltsSet, addTestToSet } from '@/lib/api/ielts'
 
 const difficultyVariant: Record<'beginner' | 'intermediate' | 'advanced', 'success' | 'warning' | 'secondary'> = {
   beginner: 'success',
@@ -27,8 +31,31 @@ type SetDetailShellProps = {
 
 export function SetDetailShell({ set: initial }: SetDetailShellProps) {
   const [set, setSet] = useState(initial)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [addTestModalOpen, setAddTestModalOpen] = useState(false)
+  const [newTestTitle, setNewTestTitle] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const sorted = [...set.tests].sort((a, b) => a.orderIndex - b.orderIndex)
+
+  const handleEditSave = async (data: { title: string; description: string; type: 'academic' | 'general'; difficulty: 'beginner' | 'intermediate' | 'advanced'; status: IeltsStatus }) => {
+    const prev = set
+    const updated = { ...set, ...data }
+    setSet(updated)
+    try { await updateIeltsSet(set.id, updated) } catch { setSet(prev) }
+  }
+
+  const handleAddTest = async () => {
+    if (!newTestTitle.trim()) return
+    setSaving(true)
+    try {
+      const test = await addTestToSet(set.id, { title: newTestTitle.trim(), orderIndex: set.tests.length + 1, durationMinutes: 170, sections: [] })
+      setSet((prev) => ({ ...prev, tests: [...prev.tests, test], testCount: prev.tests.length + 1 }))
+      setNewTestTitle('')
+      setAddTestModalOpen(false)
+    } catch { /* leave state */ }
+    setSaving(false)
+  }
 
   return (
     <div className="p-5 sm:p-6 space-y-6 max-w-3xl mx-auto">
@@ -36,11 +63,11 @@ export function SetDetailShell({ set: initial }: SetDetailShellProps) {
 
       <div className="space-y-4">
         <PageHeader title={set.title} description={set.description || 'No description.'}>
-          <Button size="sm" variant="ghost">
+          <Button size="sm" variant="ghost" onClick={() => setEditModalOpen(true)}>
             <Pencil className="h-3.5 w-3.5" />
             Edit
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setAddTestModalOpen(true)}>
             <Plus className="h-3.5 w-3.5" />
             Add Test
           </Button>
@@ -67,6 +94,28 @@ export function SetDetailShell({ set: initial }: SetDetailShellProps) {
           ))
         )}
       </div>
+
+      <MockTestFormModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        editing={set}
+        onSave={handleEditSave}
+      />
+
+      <Modal open={addTestModalOpen} onClose={() => setAddTestModalOpen(false)} title="Add Test">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Test Title</label>
+            <Input value={newTestTitle} onChange={(e) => setNewTestTitle(e.target.value)} placeholder="e.g. Test 1" autoFocus />
+          </div>
+          <div className="flex gap-2 justify-end pt-1">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setAddTestModalOpen(false)}>Cancel</Button>
+            <Button type="button" size="sm" onClick={handleAddTest} disabled={saving || !newTestTitle.trim()}>
+              {saving ? 'Adding…' : 'Add Test'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

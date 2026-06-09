@@ -26,6 +26,9 @@ type IeltsContentShellProps = {
   typeLabel?: string
   manageHrefPrefix?: string
   setFilters?: SetFilterOption[]
+  onApiCreate?: (data: { title: string; type: string }) => Promise<{ id: string; createdAt: string }>
+  onApiUpdate?: (id: string, data: { title: string; type: string; status: IeltsStatus }) => Promise<void>
+  onApiDelete?: (id: string) => Promise<void>
 }
 
 export function IeltsContentShell({
@@ -36,6 +39,9 @@ export function IeltsContentShell({
   typeLabel,
   manageHrefPrefix,
   setFilters,
+  onApiCreate,
+  onApiUpdate,
+  onApiDelete,
 }: IeltsContentShellProps) {
   const [rows, setRows] = useState(initialRows)
   const [modalOpen, setModalOpen] = useState(false)
@@ -46,18 +52,20 @@ export function IeltsContentShell({
   const handleNew = () => { setEditing(null); setModalOpen(true) }
   const handleEdit = (row: ContentRow) => { setEditing(row); setModalOpen(true) }
 
-  const handleSave = ({ title: t, type, status }: { title: string; type: string; status: IeltsStatus }) => {
+  const handleSave = async ({ title: t, type, status }: { title: string; type: string; status: IeltsStatus }) => {
     if (editing) {
+      if (onApiUpdate) {
+        try { await onApiUpdate(editing.id, { title: t, type, status }) } catch { return }
+      }
       setRows((prev) => prev.map((r) => (r.id === editing.id ? { ...r, title: t, meta: type, status } : r)))
     } else {
-      const newRow: ContentRow = {
-        id: `new-${Date.now()}`,
-        title: t,
-        meta: type,
-        status,
-        createdAt: new Date().toISOString().slice(0, 10),
+      if (onApiCreate) {
+        let result: { id: string; createdAt: string }
+        try { result = await onApiCreate({ title: t, type }) } catch { return }
+        setRows((prev) => [{ id: result.id, title: t, meta: type, status, createdAt: result.createdAt }, ...prev])
+      } else {
+        setRows((prev) => [{ id: `new-${Date.now()}`, title: t, meta: type, status, createdAt: new Date().toISOString().slice(0, 10) }, ...prev])
       }
-      setRows((prev) => [newRow, ...prev])
     }
   }
 
@@ -122,6 +130,7 @@ export function IeltsContentShell({
         initialRows={filteredRows}
         onNew={handleNew}
         onEdit={handleEdit}
+        onApiDelete={onApiDelete}
         manageHrefPrefix={manageHrefPrefix}
         filterSlot={filterSlot}
       />

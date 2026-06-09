@@ -1,94 +1,65 @@
 import { cache } from 'react'
-import { delay } from '@/lib/utils/delay'
-import { mockReadingTests } from '@/lib/mock/reading-tests'
-import { mockListeningTests } from '@/lib/mock/listening-tests'
-import { mockWritingTasks } from '@/lib/mock/writing-tasks'
-import { mockSpeakingSessions } from '@/lib/mock/speaking-sessions'
-import { mockMockTests } from '@/lib/mock/mock-tests'
-import { mockVocabTopics } from '@/lib/mock/vocabulary'
-import { mockFullReadingTests } from '@/lib/mock/reading-tests-full'
-import { mockFullListeningTests } from '@/lib/mock/listening-tests-full'
-import { mockFullWritingTasks } from '@/lib/mock/writing-tasks-full'
-import { mockFullSpeakingSessions } from '@/lib/mock/speaking-sessions-full'
-import { mockFullMockTests } from '@/lib/mock/mock-tests-full'
-import { mockIeltsSets } from '@/lib/mock/sets'
-import { mockFullIeltsSets } from '@/lib/mock/sets-full'
+import {
+  fetchReadingTests, fetchReadingTestById,
+  fetchListeningTests, fetchListeningTestById,
+  fetchWritingTasks, fetchWritingTaskById,
+  fetchSpeakingSessions, fetchSpeakingSessionById,
+  fetchVocabTopics, fetchVocabTopicById,
+  fetchIeltsSets, fetchIeltsSetById,
+} from '@/lib/api/ielts'
 
-// ─── Flat list getters (used by list pages) ───────────────────────────────────
+export const getReadingTests = cache(async () =>
+  fetchReadingTests(1, 100).then(r => r.items).catch(() => [])
+)
 
-export const getReadingTests = cache(async () => {
-  await delay(150)
-  return mockReadingTests
-})
+export const getListeningTests = cache(async () =>
+  fetchListeningTests(1, 100).then(r => r.items).catch(() => [])
+)
 
-export const getListeningTests = cache(async () => {
-  await delay(150)
-  return mockListeningTests
-})
+export const getWritingTasks = cache(async () =>
+  fetchWritingTasks(1, 100).then(r => r.items).catch(() => [])
+)
 
-export const getWritingTasks = cache(async () => {
-  await delay(150)
-  return mockWritingTasks
-})
+export const getSpeakingSessions = cache(async () =>
+  fetchSpeakingSessions(1, 100).then(r => r.items).catch(() => [])
+)
 
-export const getSpeakingSessions = cache(async () => {
-  await delay(150)
-  return mockSpeakingSessions
-})
+export const getVocabTopics = cache(async () =>
+  fetchVocabTopics(1, 100).then(r => r.items).catch(() => [])
+)
 
-export const getMockTests = cache(async () => {
-  await delay(150)
-  return mockMockTests
-})
+export const getIeltsSets = cache(async () =>
+  fetchIeltsSets(1, 100).then(r => r.items).catch(() => [])
+)
 
-export const getVocabTopics = cache(async () => {
-  await delay(150)
-  return mockVocabTopics
-})
+export const getFullReadingTest = cache(async (id: string) =>
+  fetchReadingTestById(id).catch(() => undefined)
+)
 
-// ─── Full nested getters (used by detail pages) ───────────────────────────────
+export const getFullListeningTest = cache(async (id: string) =>
+  fetchListeningTestById(id).catch(() => undefined)
+)
 
-export const getFullReadingTest = cache(async (id: string) => {
-  await delay(150)
-  return mockFullReadingTests.find((t) => t.id === id)
-})
+export const getFullWritingTask = cache(async (id: string) =>
+  fetchWritingTaskById(id).catch(() => undefined)
+)
 
-export const getFullListeningTest = cache(async (id: string) => {
-  await delay(150)
-  return mockFullListeningTests.find((t) => t.id === id)
-})
+export const getFullSpeakingSession = cache(async (id: string) =>
+  fetchSpeakingSessionById(id).catch(() => undefined)
+)
 
-export const getFullWritingTask = cache(async (id: string) => {
-  await delay(150)
-  return mockFullWritingTasks.find((t) => t.id === id)
-})
+export const getFullVocabTopic = cache(async (id: string) =>
+  fetchVocabTopicById(id).catch(() => undefined)
+)
 
-export const getFullSpeakingSession = cache(async (id: string) => {
-  await delay(150)
-  return mockFullSpeakingSessions.find((s) => s.id === id)
-})
-
-export const getFullMockTest = cache(async (id: string) => {
-  await delay(150)
-  return mockFullMockTests.find((t) => t.id === id)
-})
-
-// ─── Set → Test hierarchy getters ─────────────────────────────────────────────
-
-export const getIeltsSets = cache(async () => {
-  await delay(150)
-  return mockIeltsSets
-})
-
-export const getFullIeltsSet = cache(async (setId: string) => {
-  await delay(150)
-  return mockFullIeltsSets.find((s) => s.id === setId)
-})
+export const getFullIeltsSet = cache(async (setId: string) =>
+  fetchIeltsSetById(setId).catch(() => undefined)
+)
 
 export const getFullIeltsTestInSet = cache(async (setId: string, testId: string) => {
-  await delay(150)
-  const set = mockFullIeltsSets.find((s) => s.id === setId)
-  const test = set?.tests.find((t) => t.id === testId)
-  if (!set || !test) return undefined
+  const set = await fetchIeltsSetById(setId).catch(() => undefined)
+  if (!set) return undefined
+  const test = set.tests.find(t => t.id === testId)
+  if (!test) return undefined
   return { set, test }
 })

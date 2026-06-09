@@ -12,6 +12,7 @@ import { ListeningSectionFormModal } from './ListeningSectionFormModal'
 import { Breadcrumb } from './Breadcrumb'
 import type { FullListeningTest, ListeningSection, IeltsStatus, SetContext } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
+import { updateListeningTest } from '@/lib/api/ielts'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
   published: 'success',
@@ -41,42 +42,35 @@ export function ListeningTestDetailShell({ test: initial, setContext }: Listenin
   const [editingSection, setEditingSection] = useState<ListeningSection | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ListeningSection | null>(null)
 
-  const handleMetaSave = ({ title, status }: { title: string; type: string; status: IeltsStatus }) => {
-    setTest((prev) => ({ ...prev, title, status }))
+  const handleMetaSave = async ({ title, status }: { title: string; type: string; status: IeltsStatus }) => {
+    const updated = { ...test, title, status }
+    setTest(updated)
+    try { await updateListeningTest(test.id, updated) } catch { setTest(test) }
   }
 
-  const handleSectionSave = ({ sectionNumber, audioUrl, audioDurationSeconds, transcript }: {
+  const handleSectionSave = async ({ sectionNumber, audioUrl, audioDurationSeconds, transcript }: {
     sectionNumber: 1 | 2 | 3 | 4
     audioUrl: string
     audioDurationSeconds: number
     transcript: string
   }) => {
+    let updated: FullListeningTest
     if (editingSection) {
-      setTest((prev) => ({
-        ...prev,
-        sections: prev.sections.map((s) =>
-          s.id === editingSection.id
-            ? { ...s, sectionNumber, audioUrl, audioDurationSeconds, transcript }
-            : s
-        ),
-      }))
+      updated = { ...test, sections: test.sections.map((s) => s.id === editingSection.id ? { ...s, sectionNumber, audioUrl, audioDurationSeconds, transcript } : s) }
     } else {
-      const newSection: ListeningSection = {
-        id: genId(),
-        sectionNumber,
-        audioUrl,
-        audioDurationSeconds,
-        transcript,
-        questions: [],
-      }
-      setTest((prev) => ({ ...prev, sections: [...prev.sections, newSection] }))
+      const newSection: ListeningSection = { id: genId(), sectionNumber, audioUrl, audioDurationSeconds, transcript, questions: [] }
+      updated = { ...test, sections: [...test.sections, newSection] }
     }
+    setTest(updated)
+    try { await updateListeningTest(test.id, updated) } catch { setTest(test) }
   }
 
-  const handleDeleteSection = () => {
+  const handleDeleteSection = async () => {
     if (!deleteTarget) return
-    setTest((prev) => ({ ...prev, sections: prev.sections.filter((s) => s.id !== deleteTarget.id) }))
+    const updated = { ...test, sections: test.sections.filter((s) => s.id !== deleteTarget.id) }
+    setTest(updated)
     setDeleteTarget(null)
+    try { await updateListeningTest(test.id, updated) } catch { setTest(test) }
   }
 
   const sortedSections = [...test.sections].sort((a, b) => a.sectionNumber - b.sectionNumber)

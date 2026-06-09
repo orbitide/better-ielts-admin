@@ -12,6 +12,7 @@ import { ReadingSectionFormModal } from './ReadingSectionFormModal'
 import { Breadcrumb } from './Breadcrumb'
 import type { FullReadingTest, ReadingSection, IeltsStatus, SetContext } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
+import { updateReadingTest } from '@/lib/api/ielts'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
   published: 'success',
@@ -35,36 +36,31 @@ export function ReadingTestDetailShell({ test: initial, setContext }: ReadingTes
   const [editingSection, setEditingSection] = useState<ReadingSection | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ReadingSection | null>(null)
 
-  const handleMetaSave = ({ title, type, status }: { title: string; type: string; status: IeltsStatus }) => {
-    setTest((prev) => ({ ...prev, title, type: type as 'academic' | 'general', status }))
+  const handleMetaSave = async ({ title, type, status }: { title: string; type: string; status: IeltsStatus }) => {
+    const updated = { ...test, title, type: type as 'academic' | 'general', status }
+    setTest(updated)
+    try { await updateReadingTest(test.id, updated) } catch { setTest(test) }
   }
 
-  const handleSectionSave = ({ passageTitle, passageBody, passageIndex }: { passageTitle: string; passageBody: string; passageIndex: number }) => {
+  const handleSectionSave = async ({ passageTitle, passageBody, passageIndex }: { passageTitle: string; passageBody: string; passageIndex: number }) => {
     const wordCount = passageBody.trim() ? passageBody.trim().split(/\s+/).length : 0
+    let updated: FullReadingTest
     if (editingSection) {
-      setTest((prev) => ({
-        ...prev,
-        sections: prev.sections.map((s) =>
-          s.id === editingSection.id
-            ? { ...s, passageIndex, passage: { ...s.passage, title: passageTitle, body: passageBody, wordCount } }
-            : s
-        ),
-      }))
+      updated = { ...test, sections: test.sections.map((s) => s.id === editingSection.id ? { ...s, passageIndex, passage: { ...s.passage, title: passageTitle, body: passageBody, wordCount } } : s) }
     } else {
-      const newSection: ReadingSection = {
-        id: genId(),
-        passageIndex,
-        passage: { id: genId(), title: passageTitle, body: passageBody, wordCount },
-        questions: [],
-      }
-      setTest((prev) => ({ ...prev, sections: [...prev.sections, newSection] }))
+      const newSection: ReadingSection = { id: genId(), passageIndex, passage: { id: genId(), title: passageTitle, body: passageBody, wordCount }, questions: [] }
+      updated = { ...test, sections: [...test.sections, newSection] }
     }
+    setTest(updated)
+    try { await updateReadingTest(test.id, updated) } catch { setTest(test) }
   }
 
-  const handleDeleteSection = () => {
+  const handleDeleteSection = async () => {
     if (!deleteTarget) return
-    setTest((prev) => ({ ...prev, sections: prev.sections.filter((s) => s.id !== deleteTarget.id) }))
+    const updated = { ...test, sections: test.sections.filter((s) => s.id !== deleteTarget.id) }
+    setTest(updated)
     setDeleteTarget(null)
+    try { await updateReadingTest(test.id, updated) } catch { setTest(test) }
   }
 
   const sortedSections = [...test.sections].sort((a, b) => a.passageIndex - b.passageIndex)
