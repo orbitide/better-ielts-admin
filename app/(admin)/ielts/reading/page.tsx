@@ -40,7 +40,7 @@ export default async function ReadingPage() {
   const rows: ContentRow[] = tests.map((t) => ({
     id: t.id,
     title: t.title,
-    meta: `${t.type} · ${t.passageCount} passages · ${t.questionCount} Qs`,
+    meta: [t.setName, t.testName, `${t.type} · ${t.passageCount} passages · ${t.questionCount} Qs`].filter(Boolean).join(' · '),
     status: t.status,
     createdAt: t.createdAt,
   }))

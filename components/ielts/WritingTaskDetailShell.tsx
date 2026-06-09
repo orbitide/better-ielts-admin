@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
 import { ImagePickerField } from '@/components/media/ImagePickerField'
+import { toast } from 'sonner'
 import type { FullWritingTask, IeltsStatus, SetContext } from '@/lib/types/ielts'
 import { updateWritingTask } from '@/lib/api/ielts'
 
@@ -43,8 +44,9 @@ export function WritingTaskDetailShell({ task: initial, setContext }: WritingTas
     try {
       await updateWritingTask(task.id, task)
       setDirty(false)
-    } catch {
-      // keep dirty state so user can retry
+      toast.success('Changes saved.')
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to save.')
     }
   }
 

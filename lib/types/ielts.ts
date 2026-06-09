@@ -11,6 +11,8 @@ export type ReadingTest = {
   durationMinutes: number
   status: IeltsStatus
   createdAt: string
+  setName?: string
+  testName?: string
 }
 
 export type ListeningTest = {

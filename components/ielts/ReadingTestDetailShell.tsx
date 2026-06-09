@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Plus, Pencil, Trash2, Settings2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -37,13 +38,21 @@ export function ReadingTestDetailShell({ test: initial, setContext }: ReadingTes
   const [deleteTarget, setDeleteTarget] = useState<ReadingSection | null>(null)
 
   const handleMetaSave = async ({ title, type, status }: { title: string; type: string; status: IeltsStatus }) => {
+    const prev = test
     const updated = { ...test, title, type: type as 'academic' | 'general', status }
     setTest(updated)
-    try { await updateReadingTest(test.id, updated) } catch { setTest(test) }
+    try {
+      const saved = await updateReadingTest(test.id, updated)
+      setTest(saved)
+    } catch (err) {
+      setTest(prev)
+      toast.error((err as Error).message ?? 'Failed to save.')
+    }
   }
 
   const handleSectionSave = async ({ passageTitle, passageBody, passageIndex }: { passageTitle: string; passageBody: string; passageIndex: number }) => {
     const wordCount = passageBody.trim() ? passageBody.trim().split(/\s+/).length : 0
+    const prev = test
     let updated: FullReadingTest
     if (editingSection) {
       updated = { ...test, sections: test.sections.map((s) => s.id === editingSection.id ? { ...s, passageIndex, passage: { ...s.passage, title: passageTitle, body: passageBody, wordCount } } : s) }
@@ -52,15 +61,28 @@ export function ReadingTestDetailShell({ test: initial, setContext }: ReadingTes
       updated = { ...test, sections: [...test.sections, newSection] }
     }
     setTest(updated)
-    try { await updateReadingTest(test.id, updated) } catch { setTest(test) }
+    try {
+      const saved = await updateReadingTest(test.id, updated)
+      setTest(saved)
+    } catch (err) {
+      setTest(prev)
+      toast.error((err as Error).message ?? 'Failed to save section.')
+    }
   }
 
   const handleDeleteSection = async () => {
     if (!deleteTarget) return
+    const prev = test
     const updated = { ...test, sections: test.sections.filter((s) => s.id !== deleteTarget.id) }
     setTest(updated)
     setDeleteTarget(null)
-    try { await updateReadingTest(test.id, updated) } catch { setTest(test) }
+    try {
+      const saved = await updateReadingTest(test.id, updated)
+      setTest(saved)
+    } catch (err) {
+      setTest(prev)
+      toast.error((err as Error).message ?? 'Failed to delete section.')
+    }
   }
 
   const sortedSections = [...test.sections].sort((a, b) => a.passageIndex - b.passageIndex)

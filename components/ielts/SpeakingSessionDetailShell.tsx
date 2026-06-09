@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil } from 'lucide-react'
+import { Pencil, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -27,18 +28,53 @@ export function SpeakingSessionDetailShell({ session: initial, setContext }: Spe
   const [metaModalOpen, setMetaModalOpen] = useState(false)
 
   const handleMetaSave = async ({ title, status }: { title: string; type: string; status: IeltsStatus }) => {
+    const prev = session
     const updated = { ...session, title, status }
     setSession(updated)
-    try { await updateSpeakingSession(session.id, updated) } catch { setSession(session) }
+    try {
+      const saved = await updateSpeakingSession(session.id, updated)
+      setSession(saved)
+    } catch (err) {
+      setSession(prev)
+      toast.error((err as Error).message ?? 'Failed to save.')
+    }
   }
 
   const handlePartUpdate = async (updatedPart: SpeakingPart) => {
+    const prev = session
     const updated = { ...session, parts: session.parts.map((p) => (p.part === updatedPart.part ? updatedPart : p)) }
     setSession(updated)
-    try { await updateSpeakingSession(session.id, updated) } catch { setSession(session) }
+    try {
+      const saved = await updateSpeakingSession(session.id, updated)
+      setSession(saved)
+    } catch (err) {
+      setSession(prev)
+      toast.error((err as Error).message ?? 'Failed to save part.')
+    }
+  }
+
+  const handleAddPart = async (partNumber: 1 | 2 | 3) => {
+    const newPart: SpeakingPart = {
+      part: partNumber,
+      topic: '',
+      questions: [],
+      speakingMinutes: partNumber === 2 ? 3 : 4,
+      ...(partNumber === 2 && { cueCardPrompt: '', preparationSeconds: 60 }),
+    }
+    const prev = session
+    const updated = { ...session, parts: [...session.parts, newPart].sort((a, b) => a.part - b.part), partCount: session.parts.length + 1 }
+    setSession(updated)
+    try {
+      const saved = await updateSpeakingSession(session.id, updated)
+      setSession(saved)
+    } catch (err) {
+      setSession(prev)
+      toast.error((err as Error).message ?? 'Failed to add part.')
+    }
   }
 
   const sortedParts = [...session.parts].sort((a, b) => a.part - b.part)
+  const missingParts = ([1, 2, 3] as const).filter((n) => !session.parts.some((p) => p.part === n))
 
   return (
     <>
@@ -69,12 +105,32 @@ export function SpeakingSessionDetailShell({ session: initial, setContext }: Spe
         <div className="space-y-4">
           {sortedParts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border py-10 text-center">
-              <p className="text-sm text-muted-foreground">No parts yet. Parts will appear here once the session is populated.</p>
+              <p className="text-sm text-muted-foreground mb-4">No parts yet. Add parts to get started.</p>
+              <div className="flex justify-center gap-2">
+                {missingParts.map((n) => (
+                  <Button key={n} size="sm" variant="ghost" onClick={() => handleAddPart(n)}>
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Part {n}
+                  </Button>
+                ))}
+              </div>
             </div>
           ) : (
-            sortedParts.map((part) => (
-              <SpeakingPartCard key={part.part} part={part} onUpdate={handlePartUpdate} />
-            ))
+            <>
+              {sortedParts.map((part) => (
+                <SpeakingPartCard key={part.part} part={part} onUpdate={handlePartUpdate} />
+              ))}
+              {missingParts.length > 0 && (
+                <div className="flex gap-2">
+                  {missingParts.map((n) => (
+                    <Button key={n} size="sm" variant="ghost" onClick={() => handleAddPart(n)}>
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Part {n}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

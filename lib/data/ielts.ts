@@ -8,56 +8,62 @@ import {
   fetchIeltsSets, fetchIeltsSetById,
 } from '@/lib/api/ielts'
 
+// Re-throws non-404 errors so they surface as server errors rather than not-found pages.
+function onlyNotFound(err: unknown): undefined {
+  if ((err as { status?: number }).status === 404) return undefined
+  throw err
+}
+
 export const getReadingTests = cache(async () =>
-  fetchReadingTests(1, 100).then(r => r.items).catch(() => [])
+  fetchReadingTests(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
 )
 
 export const getListeningTests = cache(async () =>
-  fetchListeningTests(1, 100).then(r => r.items).catch(() => [])
+  fetchListeningTests(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
 )
 
 export const getWritingTasks = cache(async () =>
-  fetchWritingTasks(1, 100).then(r => r.items).catch(() => [])
+  fetchWritingTasks(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
 )
 
 export const getSpeakingSessions = cache(async () =>
-  fetchSpeakingSessions(1, 100).then(r => r.items).catch(() => [])
+  fetchSpeakingSessions(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
 )
 
 export const getVocabTopics = cache(async () =>
-  fetchVocabTopics(1, 100).then(r => r.items).catch(() => [])
+  fetchVocabTopics(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
 )
 
 export const getIeltsSets = cache(async () =>
-  fetchIeltsSets(1, 100).then(r => r.items).catch(() => [])
+  fetchIeltsSets(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
 )
 
 export const getFullReadingTest = cache(async (id: string) =>
-  fetchReadingTestById(id).catch(() => undefined)
+  fetchReadingTestById(id).catch(onlyNotFound)
 )
 
 export const getFullListeningTest = cache(async (id: string) =>
-  fetchListeningTestById(id).catch(() => undefined)
+  fetchListeningTestById(id).catch(onlyNotFound)
 )
 
 export const getFullWritingTask = cache(async (id: string) =>
-  fetchWritingTaskById(id).catch(() => undefined)
+  fetchWritingTaskById(id).catch(onlyNotFound)
 )
 
 export const getFullSpeakingSession = cache(async (id: string) =>
-  fetchSpeakingSessionById(id).catch(() => undefined)
+  fetchSpeakingSessionById(id).catch(onlyNotFound)
 )
 
 export const getFullVocabTopic = cache(async (id: string) =>
-  fetchVocabTopicById(id).catch(() => undefined)
+  fetchVocabTopicById(id).catch(onlyNotFound)
 )
 
 export const getFullIeltsSet = cache(async (setId: string) =>
-  fetchIeltsSetById(setId).catch(() => undefined)
+  fetchIeltsSetById(setId).catch(onlyNotFound)
 )
 
 export const getFullIeltsTestInSet = cache(async (setId: string, testId: string) => {
-  const set = await fetchIeltsSetById(setId).catch(() => undefined)
+  const set = await fetchIeltsSetById(setId).catch(onlyNotFound)
   if (!set) return undefined
   const test = set.tests.find(t => t.id === testId)
   if (!test) return undefined

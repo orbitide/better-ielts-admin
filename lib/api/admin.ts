@@ -147,6 +147,14 @@ export async function fetchAdminSubscriptions(page = 1, pageSize = 20) {
   return { ...result, items: result.items.map(mapSubscription) }
 }
 
+export async function updateSubscription(
+  id: string,
+  body: { plan: string; status: string; renewsAt: string }
+): Promise<SubscriptionRecord> {
+  const { data } = await serverApi.patch(`/api/admin/subscriptions/${id}`, body)
+  return mapSubscription(data.data as ApiSubscription)
+}
+
 export async function fetchRecentTransactions(): Promise<Transaction[]> {
   const subs = await fetchAdminSubscriptions(1, 5)
   return subs.items

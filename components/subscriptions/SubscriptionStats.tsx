@@ -1,7 +1,12 @@
+'use client'
+
+import { useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable'
 import type { SubscriptionRecord } from '@/lib/types/admin'
+import { ManageSubscriptionModal } from './ManageSubscriptionModal'
 
 const statusVariant: Record<string, 'success' | 'destructive' | 'warning'> = {
   active: 'success',
@@ -9,53 +14,69 @@ const statusVariant: Record<string, 'success' | 'destructive' | 'warning'> = {
   past_due: 'warning',
 }
 
-const columns: ColumnDef<SubscriptionRecord>[] = [
-  {
-    accessorKey: 'userName',
-    header: 'User',
-    cell: ({ row }) => (
-      <div>
-        <p className="font-medium leading-none">{row.original.userName}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{row.original.userEmail}</p>
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'plan',
-    header: 'Plan',
-    cell: ({ row }) => (
-      <Badge variant={row.original.plan === 'elite' ? 'default' : 'success'}>
-        {row.original.plan}
-      </Badge>
-    ),
-    meta: { className: 'hidden sm:table-cell' },
-  },
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => (
-      <Badge variant={statusVariant[row.original.status]}>{row.original.status}</Badge>
-    ),
-  },
-  {
-    accessorKey: 'amount',
-    header: 'Amount',
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">${row.original.amount}/mo</span>
-    ),
-    meta: { className: 'hidden md:table-cell' },
-  },
-  {
-    accessorKey: 'renewsAt',
-    header: 'Renews',
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.renewsAt}</span>
-    ),
-    meta: { className: 'hidden lg:table-cell' },
-  },
-]
+function buildColumns(
+  onManage: (sub: SubscriptionRecord) => void
+): ColumnDef<SubscriptionRecord>[] {
+  return [
+    {
+      accessorKey: 'userName',
+      header: 'User',
+      cell: ({ row }) => (
+        <div>
+          <p className="font-medium leading-none">{row.original.userName}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{row.original.userEmail}</p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'plan',
+      header: 'Plan',
+      cell: ({ row }) => (
+        <Badge variant={row.original.plan === 'elite' ? 'default' : 'success'}>
+          {row.original.plan}
+        </Badge>
+      ),
+      meta: { className: 'hidden sm:table-cell' },
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={statusVariant[row.original.status]}>{row.original.status}</Badge>
+      ),
+    },
+    {
+      accessorKey: 'amount',
+      header: 'Amount',
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">${row.original.amount}/mo</span>
+      ),
+      meta: { className: 'hidden md:table-cell' },
+    },
+    {
+      accessorKey: 'renewsAt',
+      header: 'Renews',
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.renewsAt}</span>
+      ),
+      meta: { className: 'hidden lg:table-cell' },
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" onClick={() => onManage(row.original)}>
+          Manage
+        </Button>
+      ),
+    },
+  ]
+}
 
 export function SubscriptionStats({ subscriptions }: { subscriptions: SubscriptionRecord[] }) {
+  const [manageSub, setManageSub] = useState<SubscriptionRecord | null>(null)
+  const columns = buildColumns(setManageSub)
+
   const active = subscriptions.filter((s) => s.status === 'active').length
   const cancelled = subscriptions.filter((s) => s.status === 'cancelled').length
   const pro = subscriptions.filter((s) => s.plan === 'pro' && s.status === 'active').length
@@ -100,6 +121,12 @@ export function SubscriptionStats({ subscriptions }: { subscriptions: Subscripti
           {cancelled} cancelled subscription{cancelled > 1 ? 's' : ''} not shown in MRR.
         </p>
       )}
+
+      <ManageSubscriptionModal
+        subscription={manageSub}
+        open={manageSub !== null}
+        onClose={() => setManageSub(null)}
+      />
     </div>
   )
 }
