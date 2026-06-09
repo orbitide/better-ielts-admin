@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { toast } from 'sonner'
 import { ContentTable, type ContentRow } from './ContentTable'
 import { ContentFormModal } from './ContentFormModal'
 import { Select } from '@/components/ui/Select'
@@ -55,13 +56,25 @@ export function IeltsContentShell({
   const handleSave = async ({ title: t, type, status }: { title: string; type: string; status: IeltsStatus }) => {
     if (editing) {
       if (onApiUpdate) {
-        try { await onApiUpdate(editing.id, { title: t, type, status }) } catch { return }
+        try {
+          await onApiUpdate(editing.id, { title: t, type, status })
+          toast.success('Changes saved.')
+        } catch (err) {
+          toast.error((err as Error).message ?? 'Failed to save changes.')
+          return
+        }
       }
       setRows((prev) => prev.map((r) => (r.id === editing.id ? { ...r, title: t, meta: type, status } : r)))
     } else {
       if (onApiCreate) {
         let result: { id: string; createdAt: string }
-        try { result = await onApiCreate({ title: t, type }) } catch { return }
+        try {
+          result = await onApiCreate({ title: t, type })
+          toast.success('Created successfully.')
+        } catch (err) {
+          toast.error((err as Error).message ?? 'Failed to create.')
+          return
+        }
         setRows((prev) => [{ id: result.id, title: t, meta: type, status, createdAt: result.createdAt }, ...prev])
       } else {
         setRows((prev) => [{ id: `new-${Date.now()}`, title: t, meta: type, status, createdAt: new Date().toISOString().slice(0, 10) }, ...prev])

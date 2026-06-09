@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Pencil, Plus, Settings2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -42,7 +43,13 @@ export function SetDetailShell({ set: initial }: SetDetailShellProps) {
     const prev = set
     const updated = { ...set, ...data }
     setSet(updated)
-    try { await updateIeltsSet(set.id, updated) } catch { setSet(prev) }
+    try {
+      await updateIeltsSet(set.id, updated)
+      toast.success('Set updated.')
+    } catch (err) {
+      setSet(prev)
+      toast.error((err as Error).message ?? 'Failed to update set.')
+    }
   }
 
   const handleAddTest = async () => {
@@ -53,7 +60,10 @@ export function SetDetailShell({ set: initial }: SetDetailShellProps) {
       setSet((prev) => ({ ...prev, tests: [...prev.tests, test], testCount: prev.tests.length + 1 }))
       setNewTestTitle('')
       setAddTestModalOpen(false)
-    } catch { /* leave state */ }
+      toast.success('Test added.')
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to add test.')
+    }
     setSaving(false)
   }
 

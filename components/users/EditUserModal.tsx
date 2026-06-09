@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Lock, LockOpen } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -20,6 +21,7 @@ export function EditUserModal({ open, onClose, user, onSave }: Props) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [plan, setPlan] = useState<'free' | 'pro' | 'elite'>('free')
+  const [emailUnlocked, setEmailUnlocked] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -27,6 +29,7 @@ export function EditUserModal({ open, onClose, user, onSave }: Props) {
       setName(user.name)
       setEmail(user.email)
       setPlan(user.plan)
+      setEmailUnlocked(false)
       setErrors({})
     }
   }, [user])
@@ -65,8 +68,33 @@ export function EditUserModal({ open, onClose, user, onSave }: Props) {
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Email</label>
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email address" />
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-muted-foreground">Email</label>
+            <button
+              type="button"
+              onClick={() => setEmailUnlocked((v) => !v)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {emailUnlocked ? (
+                <><LockOpen className="h-3 w-3" /> Lock</>
+              ) : (
+                <><Lock className="h-3 w-3" /> Unlock to edit</>
+              )}
+            </button>
+          </div>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email address"
+            readOnly={!emailUnlocked}
+            className={!emailUnlocked ? 'opacity-60 cursor-not-allowed' : ''}
+          />
+          {emailUnlocked && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Changing the email will affect the user&apos;s login credentials.
+            </p>
+          )}
           {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
         </div>
 

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Pencil, Trash2, Plus, Settings2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -18,6 +19,9 @@ export type ContentRow = {
   id: string
   title: string
   meta: string
+  type?: string
+  testCount?: string
+  difficulty?: string
   status: IeltsStatus
   createdAt: string
 }
@@ -59,8 +63,9 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
         await onApiDelete(deleteTarget.id)
         startTransition(() => setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id)))
         router.refresh()
-      } catch {
-        // leave rows unchanged on error
+        toast.success('Deleted successfully.')
+      } catch (err) {
+        toast.error((err as Error).message ?? 'Failed to delete.')
       } finally {
         setDeleting(false)
       }
@@ -70,19 +75,47 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
     setDeleteTarget(null)
   }
 
+  const hasExpandedCols = rows.length > 0 && rows[0].type !== undefined
+
   const columns: ColumnDef<ContentRow>[] = [
     {
       accessorKey: 'title',
       header: 'Title',
       cell: ({ row }) => <span className="font-medium max-w-xs truncate block">{row.original.title}</span>,
     },
-    {
-      accessorKey: 'meta',
-      header: 'Details',
-      enableSorting: false,
-      cell: ({ row }) => <span className="text-muted-foreground">{row.original.meta}</span>,
-      meta: { className: 'hidden sm:table-cell' },
-    },
+    ...(hasExpandedCols
+      ? [
+          {
+            accessorKey: 'type',
+            header: 'Type',
+            enableSorting: false,
+            cell: ({ row }: { row: { original: ContentRow } }) => <span className="text-muted-foreground capitalize">{row.original.type}</span>,
+            meta: { className: 'hidden sm:table-cell' },
+          },
+          {
+            accessorKey: 'testCount',
+            header: 'Tests',
+            enableSorting: false,
+            cell: ({ row }: { row: { original: ContentRow } }) => <span className="text-muted-foreground">{row.original.testCount}</span>,
+            meta: { className: 'hidden sm:table-cell' },
+          },
+          {
+            accessorKey: 'difficulty',
+            header: 'Difficulty',
+            enableSorting: false,
+            cell: ({ row }: { row: { original: ContentRow } }) => <span className="text-muted-foreground capitalize">{row.original.difficulty}</span>,
+            meta: { className: 'hidden sm:table-cell' },
+          },
+        ] as ColumnDef<ContentRow>[]
+      : [
+          {
+            accessorKey: 'meta',
+            header: 'Details',
+            enableSorting: false,
+            cell: ({ row }: { row: { original: ContentRow } }) => <span className="text-muted-foreground">{row.original.meta}</span>,
+            meta: { className: 'hidden sm:table-cell' },
+          },
+        ] as ColumnDef<ContentRow>[]),
     {
       accessorKey: 'status',
       header: 'Status',

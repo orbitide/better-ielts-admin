@@ -19,6 +19,18 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+api.interceptors.request.use(async (config) => {
+  if (typeof window === 'undefined') {
+    try {
+      const { cookies } = await import('next/headers')
+      const store = await cookies()
+      const token = store.get('admin_access')?.value
+      if (token) config.headers.Authorization = `Bearer ${token}`
+    } catch { /* outside request context */ }
+  }
+  return config
+})
+
 api.interceptors.response.use(
   (res) => res,
   (err) => {

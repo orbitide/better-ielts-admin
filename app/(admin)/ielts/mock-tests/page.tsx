@@ -12,7 +12,10 @@ export default async function SetsPage() {
   const rows: ContentRow[] = sets.map((s) => ({
     id: s.id,
     title: s.title,
-    meta: `${s.type} · ${s.testCount} test${s.testCount !== 1 ? 's' : ''} · ${s.difficulty}`,
+    meta: '',
+    type: s.type,
+    testCount: `${s.testCount} test${s.testCount !== 1 ? 's' : ''}`,
+    difficulty: s.difficulty,
     status: s.status,
     createdAt: s.createdAt,
   }))
