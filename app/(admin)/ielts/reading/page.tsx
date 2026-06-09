@@ -1,8 +1,9 @@
 import { revalidatePath } from 'next/cache'
 import { getReadingTests, getIeltsSets, getFullIeltsSet } from '@/lib/data/ielts'
-import { createReadingTest, fetchReadingTestById, updateReadingTest, deleteReadingTest } from '@/lib/api/ielts'
+import { createReadingTest, fetchReadingTestById, updateReadingTest, deleteReadingTest, fetchIeltsSetById, updateTestInSet } from '@/lib/api/ielts'
 import { IeltsContentShell, type SetFilterOption } from '@/components/ielts/IeltsContentShell'
 import type { ContentRow } from '@/components/ielts/ContentTable'
+import type { SetOption } from '@/components/ielts/ContentFormModal'
 import type { IeltsStatus } from '@/lib/types/ielts'
 
 export const metadata = { title: 'Reading Tests' }
@@ -27,6 +28,15 @@ export default async function ReadingPage() {
     }))
     .filter((s) => s.tests.length > 0)
 
+  const createSetOptions: SetOption[] = fullSets
+    .filter(Boolean)
+    .map((set) => ({
+      id: set!.id,
+      title: set!.title,
+      tests: set!.tests.map((t) => ({ id: t.id, title: t.title })),
+    }))
+    .filter((s) => s.tests.length > 0)
+
   const rows: ContentRow[] = tests.map((t) => ({
     id: t.id,
     title: t.title,
@@ -35,9 +45,24 @@ export default async function ReadingPage() {
     createdAt: t.createdAt,
   }))
 
-  async function onCreate(data: { title: string; type: string }) {
+  async function onCreate(data: { title: string; type: string; setId?: string; testId?: string }) {
     'use server'
     const test = await createReadingTest({ title: data.title, type: data.type })
+
+    if (data.setId && data.testId) {
+      try {
+        const set = await fetchIeltsSetById(data.setId)
+        const mockTest = set.tests.find((t) => t.id === data.testId)
+        if (mockTest) {
+          const existing = mockTest.sections.find((s) => s.skill === 'reading')
+          const updatedSections = existing
+            ? mockTest.sections.map((s) => s.skill === 'reading' ? { ...s, testId: test.id } : s)
+            : [...mockTest.sections, { id: '', skill: 'reading' as const, orderIndex: mockTest.sections.length + 1, durationMinutes: 60, testId: test.id }]
+          await updateTestInSet(data.testId, data.setId, { ...mockTest, sections: updatedSections })
+        }
+      } catch { /* linking is best-effort */ }
+    }
+
     revalidatePath('/ielts/reading')
     return { id: test.id, createdAt: test.createdAt }
   }
@@ -64,6 +89,7 @@ export default async function ReadingPage() {
       typeLabel="Test Type"
       manageHrefPrefix="/ielts/reading"
       setFilters={setFilters}
+      createSetOptions={createSetOptions}
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}

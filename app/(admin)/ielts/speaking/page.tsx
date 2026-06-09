@@ -1,8 +1,9 @@
 import { revalidatePath } from 'next/cache'
 import { getSpeakingSessions, getIeltsSets, getFullIeltsSet } from '@/lib/data/ielts'
-import { createSpeakingSession, fetchSpeakingSessionById, updateSpeakingSession, deleteSpeakingSession } from '@/lib/api/ielts'
+import { createSpeakingSession, fetchSpeakingSessionById, updateSpeakingSession, deleteSpeakingSession, fetchIeltsSetById, updateTestInSet } from '@/lib/api/ielts'
 import { IeltsContentShell, type SetFilterOption } from '@/components/ielts/IeltsContentShell'
 import type { ContentRow } from '@/components/ielts/ContentTable'
+import type { SetOption } from '@/components/ielts/ContentFormModal'
 import type { IeltsStatus } from '@/lib/types/ielts'
 
 export const metadata = { title: 'Speaking Sessions' }
@@ -27,6 +28,15 @@ export default async function SpeakingPage() {
     }))
     .filter((s) => s.tests.length > 0)
 
+  const createSetOptions: SetOption[] = fullSets
+    .filter(Boolean)
+    .map((set) => ({
+      id: set!.id,
+      title: set!.title,
+      tests: set!.tests.map((t) => ({ id: t.id, title: t.title })),
+    }))
+    .filter((s) => s.tests.length > 0)
+
   const rows: ContentRow[] = sessions.map((s) => ({
     id: s.id,
     title: s.title,
@@ -35,9 +45,24 @@ export default async function SpeakingPage() {
     createdAt: s.createdAt,
   }))
 
-  async function onCreate(data: { title: string; type: string }) {
+  async function onCreate(data: { title: string; type: string; setId?: string; testId?: string }) {
     'use server'
     const session = await createSpeakingSession({ title: data.title })
+
+    if (data.setId && data.testId) {
+      try {
+        const set = await fetchIeltsSetById(data.setId)
+        const mockTest = set.tests.find((t) => t.id === data.testId)
+        if (mockTest) {
+          const existing = mockTest.sections.find((s) => s.skill === 'speaking')
+          const updatedSections = existing
+            ? mockTest.sections.map((s) => s.skill === 'speaking' ? { ...s, testId: session.id } : s)
+            : [...mockTest.sections, { id: '', skill: 'speaking' as const, orderIndex: mockTest.sections.length + 1, durationMinutes: 15, testId: session.id }]
+          await updateTestInSet(data.testId, data.setId, { ...mockTest, sections: updatedSections })
+        }
+      } catch { /* linking is best-effort */ }
+    }
+
     revalidatePath('/ielts/speaking')
     return { id: session.id, createdAt: session.createdAt }
   }
@@ -64,6 +89,7 @@ export default async function SpeakingPage() {
       typeLabel="Format"
       manageHrefPrefix="/ielts/speaking"
       setFilters={setFilters}
+      createSetOptions={createSetOptions}
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}

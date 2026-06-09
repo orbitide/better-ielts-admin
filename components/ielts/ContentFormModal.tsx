@@ -10,13 +10,20 @@ import type { IeltsStatus } from '@/lib/types/ielts'
 import { ContentSchema } from '@/lib/validations/ielts'
 import { fieldErrors } from '@/lib/validations/utils'
 
+export type SetOption = {
+  id: string
+  title: string
+  tests: { id: string; title: string }[]
+}
+
 type ContentFormModalProps = {
   open: boolean
   onClose: () => void
   editing: ContentRow | null
   typeOptions?: string[]
   typeLabel?: string
-  onSave: (data: { title: string; type: string; status: IeltsStatus }) => void
+  setOptions?: SetOption[]
+  onSave: (data: { title: string; type: string; status: IeltsStatus; setId?: string; testId?: string }) => void
 }
 
 export function ContentFormModal({
@@ -25,12 +32,17 @@ export function ContentFormModal({
   editing,
   typeOptions = ['academic', 'general'],
   typeLabel = 'Type',
+  setOptions,
   onSave,
 }: ContentFormModalProps) {
   const [title, setTitle] = useState('')
   const [type, setType] = useState(typeOptions[0])
   const [status, setStatus] = useState<IeltsStatus>('draft')
+  const [selectedSetId, setSelectedSetId] = useState('')
+  const [selectedTestId, setSelectedTestId] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const selectedSet = setOptions?.find((s) => s.id === selectedSetId)
 
   useEffect(() => {
     if (editing) {
@@ -40,9 +52,16 @@ export function ContentFormModal({
       setTitle('')
       setType(typeOptions[0])
       setStatus('draft')
+      setSelectedSetId('')
+      setSelectedTestId('')
     }
     setErrors({})
   }, [editing, typeOptions])
+
+  const handleSetChange = (value: string) => {
+    setSelectedSetId(value)
+    setSelectedTestId('')
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,7 +73,13 @@ export function ContentFormModal({
     }
     setErrors({})
 
-    onSave({ title, type, status })
+    onSave({
+      title,
+      type,
+      status,
+      setId: selectedSetId || undefined,
+      testId: selectedTestId || undefined,
+    })
     onClose()
   }
 
@@ -85,6 +110,33 @@ export function ContentFormModal({
             <option value="archived">Archived</option>
           </Select>
         </div>
+
+        {!editing && setOptions && setOptions.length > 0 && (
+          <div className="space-y-3 pt-1 border-t border-border">
+            <p className="text-xs text-muted-foreground pt-1">Assign to a mock test (optional)</p>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Set</label>
+              <Select value={selectedSetId} onChange={(e) => handleSetChange(e.target.value)} className="w-full">
+                <option value="">— Select set —</option>
+                {setOptions.map((s) => (
+                  <option key={s.id} value={s.id}>{s.title}</option>
+                ))}
+              </Select>
+            </div>
+            {selectedSet && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Test</label>
+                <Select value={selectedTestId} onChange={(e) => setSelectedTestId(e.target.value)} className="w-full">
+                  <option value="">— Select test —</option>
+                  {selectedSet.tests.map((t) => (
+                    <option key={t.id} value={t.id}>{t.title}</option>
+                  ))}
+                </Select>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex gap-2 justify-end pt-2">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
           <Button type="submit" size="sm">{editing ? 'Save Changes' : 'Create'}</Button>

@@ -8,11 +8,12 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
 import { MockTestFormModal } from './MockTestFormModal'
 import type { FullIeltsSet, FullIeltsTest, IeltsStatus } from '@/lib/types/ielts'
-import { updateIeltsSet, addTestToSet } from '@/lib/api/ielts'
+import { updateIeltsSet, addTestToSet, updateTestInSet } from '@/lib/api/ielts'
 
 const difficultyVariant: Record<'beginner' | 'intermediate' | 'advanced', 'success' | 'warning' | 'secondary'> = {
   beginner: 'success',
@@ -36,6 +37,36 @@ export function SetDetailShell({ set: initial }: SetDetailShellProps) {
   const [addTestModalOpen, setAddTestModalOpen] = useState(false)
   const [newTestTitle, setNewTestTitle] = useState('')
   const [saving, setSaving] = useState(false)
+  const [editingTest, setEditingTest] = useState<FullIeltsTest | null>(null)
+  const [editTestTitle, setEditTestTitle] = useState('')
+  const [editTestStatus, setEditTestStatus] = useState<IeltsStatus>('draft')
+  const [editTestDuration, setEditTestDuration] = useState('')
+  const [editTestSaving, setEditTestSaving] = useState(false)
+
+  const openEditTest = (test: FullIeltsTest) => {
+    setEditingTest(test)
+    setEditTestTitle(test.title)
+    setEditTestStatus(test.status)
+    setEditTestDuration(String(test.durationMinutes))
+  }
+
+  const handleEditTestSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingTest) return
+    const duration = parseInt(editTestDuration, 10)
+    if (!editTestTitle.trim() || isNaN(duration) || duration < 1) return
+    setEditTestSaving(true)
+    const updated: FullIeltsTest = { ...editingTest, title: editTestTitle.trim(), status: editTestStatus, durationMinutes: duration }
+    try {
+      await updateTestInSet(editingTest.id, set.id, updated)
+      setSet((prev) => ({ ...prev, tests: prev.tests.map((t) => t.id === editingTest.id ? updated : t) }))
+      setEditingTest(null)
+      toast.success('Test updated.')
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to update test.')
+    }
+    setEditTestSaving(false)
+  }
 
   const sorted = [...set.tests].sort((a, b) => a.orderIndex - b.orderIndex)
 
@@ -100,7 +131,7 @@ export function SetDetailShell({ set: initial }: SetDetailShellProps) {
           </p>
         ) : (
           sorted.map((test) => (
-            <TestRow key={test.id} setId={set.id} test={test} />
+            <TestRow key={test.id} setId={set.id} test={test} onEdit={openEditTest} />
           ))
         )}
       </div>
@@ -126,11 +157,40 @@ export function SetDetailShell({ set: initial }: SetDetailShellProps) {
           </div>
         </div>
       </Modal>
+
+      <Modal open={!!editingTest} onClose={() => setEditingTest(null)} title="Edit Test">
+        <form onSubmit={handleEditTestSave} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Title</label>
+            <Input value={editTestTitle} onChange={(e) => setEditTestTitle(e.target.value)} placeholder="e.g. Test 1" autoFocus />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Status</label>
+              <Select value={editTestStatus} onChange={(e) => setEditTestStatus(e.target.value as IeltsStatus)} className="w-full">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Duration (min)</label>
+              <Input type="number" min={1} value={editTestDuration} onChange={(e) => setEditTestDuration(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setEditingTest(null)}>Cancel</Button>
+            <Button type="submit" size="sm" disabled={editTestSaving || !editTestTitle.trim()}>
+              {editTestSaving ? 'Saving…' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }
 
-function TestRow({ setId, test }: { setId: string; test: FullIeltsTest }) {
+function TestRow({ setId, test, onEdit }: { setId: string; test: FullIeltsTest; onEdit: (test: FullIeltsTest) => void }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-4">
       <div className="rounded-lg bg-muted flex items-center justify-center h-9 w-9 text-sm font-semibold shrink-0">
@@ -148,6 +208,13 @@ function TestRow({ setId, test }: { setId: string; test: FullIeltsTest }) {
         <Badge variant={test.status === 'published' ? 'success' : test.status === 'draft' ? 'warning' : 'secondary'}>
           {test.status}
         </Badge>
+        <button
+          onClick={() => onEdit(test)}
+          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          title="Edit test"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
         <Link
           href={`/ielts/mock-tests/${setId}/tests/${test.id}`}
           className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
