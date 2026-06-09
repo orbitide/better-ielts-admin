@@ -1,13 +1,10 @@
 import { cache } from 'react'
-import { delay } from '@/lib/utils/delay'
-import { mockUsers } from '@/lib/mock/users'
+import { fetchAdminUsers, fetchAdminUserById } from '@/lib/api/admin'
 
-export const getUsers = cache(async () => {
-  await delay(150)
-  return mockUsers
+export const getUsers = cache(async (page = 1, pageSize = 50) => {
+  return fetchAdminUsers(page, pageSize)
 })
 
 export const getUserById = cache(async (id: string) => {
-  await delay(120)
-  return mockUsers.find((u) => u.id === id) ?? null
+  return fetchAdminUserById(id)
 })

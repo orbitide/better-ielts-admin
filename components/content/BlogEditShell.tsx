@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react'
 import { BlogPostForm } from './BlogPostForm'
 import { fetchBlogPostById, fetchBlogCategories } from '@/lib/api/blog'
-import { mockBlogPosts } from '@/lib/mock/blog-posts'
-import { mockBlogCategories } from '@/lib/mock/blog-categories'
 import type { BlogPost, BlogCategory } from '@/lib/types/content'
 
 export function BlogEditShell({ id }: { id: string }) {
@@ -14,8 +12,8 @@ export function BlogEditShell({ id }: { id: string }) {
 
   useEffect(() => {
     Promise.all([
-      fetchBlogPostById(id).catch(() => mockBlogPosts.find((p) => p.id === id) ?? null),
-      fetchBlogCategories().catch(() => mockBlogCategories),
+      fetchBlogPostById(id).catch(() => null),
+      fetchBlogCategories().catch(() => [] as BlogCategory[]),
     ]).then(([p, cats]) => {
       if (!p) {
         setStatus('not-found')

@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, BookMarked, Headphones, PenLine, Mic, Layers2, Brain,
-  FileText, GraduationCap, BarChart2, MessageSquare, CreditCard, ChevronLeft, ChevronRight,
+  FileText, GraduationCap, BarChart2, CreditCard, ChevronLeft, ChevronRight,
   LogOut, User, Settings, ChevronUp, ShieldCheck, KeyRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
@@ -53,10 +53,9 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Engage',
-    permission: 'community:view',
+    label: 'Revenue',
+    permission: 'subscriptions:view',
     items: [
-      { href: '/community', label: 'Community', icon: MessageSquare },
       { href: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
     ],
   },

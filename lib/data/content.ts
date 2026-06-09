@@ -1,40 +1,68 @@
 import { cache } from 'react'
-import { delay } from '@/lib/utils/delay'
-import { mockExamGuideSections } from '@/lib/mock/exam-guide'
-import { mockBandTables } from '@/lib/mock/band-tables'
-import { mockBlogPosts } from '@/lib/mock/blog-posts'
-import { mockBlogCategories } from '@/lib/mock/blog-categories'
 import { fetchBlogPosts, fetchBlogPostById, fetchBlogCategories } from '@/lib/api/blog'
 import type { BlogPostsPage } from '@/lib/api/blog'
+import type { ExamGuideSection, BandTable } from '@/lib/types/content'
+import serverApi from '@/lib/api/server'
 
 export const getBlogPosts = cache(async (page = 1, pageSize = 20) => {
-  return fetchBlogPosts(page, pageSize).catch((): BlogPostsPage => {
-    const start = (page - 1) * pageSize
-    const items = mockBlogPosts.slice(start, start + pageSize)
-    return {
-      posts: items,
-      totalCount: mockBlogPosts.length,
-      totalPages: Math.ceil(mockBlogPosts.length / pageSize),
-      page,
-      pageSize,
-    }
-  })
+  return fetchBlogPosts(page, pageSize)
 })
 
 export const getBlogCategories = cache(async () => {
-  return fetchBlogCategories().catch(() => mockBlogCategories)
+  return fetchBlogCategories()
 })
 
 export const getBlogPostById = cache(async (id: string) => {
-  return fetchBlogPostById(id).catch(() => mockBlogPosts.find((p) => p.id === id) ?? null)
+  return fetchBlogPostById(id)
 })
 
-export const getExamGuideSections = cache(async () => {
-  await delay(150)
-  return mockExamGuideSections
+export const getExamGuideSections = cache(async (): Promise<ExamGuideSection[]> => {
+  try {
+    const { data } = await serverApi.get('/api/admin/content/exam-guide')
+    const guide = data.data as {
+      overview: string
+      skills: Array<{ skill: string; label: string }>
+    }
+    if (!guide?.skills) return []
+    const skillOrder = ['general', 'listening', 'reading', 'writing', 'speaking']
+    const sections: ExamGuideSection[] = []
+    if (guide.overview) {
+      sections.push({ id: 'overview', title: 'IELTS Overview & Format', skill: 'general', order: 1, status: 'published', updatedAt: new Date().toISOString().split('T')[0] })
+    }
+    guide.skills.forEach((s, i) => {
+      sections.push({
+        id: s.skill,
+        title: s.label ?? `${s.skill} Section Guide`,
+        skill: (s.skill as ExamGuideSection['skill']) ?? 'general',
+        order: i + 2,
+        status: 'published',
+        updatedAt: new Date().toISOString().split('T')[0],
+      })
+    })
+    return sections
+  } catch {
+    return []
+  }
 })
 
-export const getBandTables = cache(async () => {
-  await delay(120)
-  return mockBandTables
+export const getBandTables = cache(async (): Promise<BandTable[]> => {
+  try {
+    const { data } = await serverApi.get('/api/admin/content/band-tables')
+    const tables = data.data as Array<{
+      id: string
+      skill: string
+      variant: string
+      rows: Array<{ rawScore: number; band: number }>
+      updatedAt: string
+    }>
+    return tables.map((t) => ({
+      id: t.id,
+      skill: t.skill as BandTable['skill'],
+      type: t.variant as BandTable['type'],
+      rows: t.rows ?? [],
+      updatedAt: t.updatedAt ? new Date(t.updatedAt).toISOString().split('T')[0] : '',
+    }))
+  } catch {
+    return []
+  }
 })

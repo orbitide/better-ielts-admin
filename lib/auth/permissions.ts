@@ -7,7 +7,6 @@ const ROLE_PERMISSIONS: Record<AdminUser['role'], Permission[]> = {
     'users:view', 'users:edit', 'users:delete', 'users:ban',
     'ielts:view', 'ielts:edit', 'ielts:delete',
     'content:view', 'content:edit', 'content:publish', 'content:delete',
-    'community:view', 'community:moderate', 'community:delete',
     'subscriptions:view',
     'admins:manage',
   ],
@@ -15,14 +14,12 @@ const ROLE_PERMISSIONS: Record<AdminUser['role'], Permission[]> = {
     'users:view',
     'ielts:view', 'ielts:edit', 'ielts:delete',
     'content:view', 'content:edit', 'content:publish', 'content:delete',
-    'community:view',
     'subscriptions:view',
   ],
   Moderator: [
     'users:view', 'users:edit', 'users:ban',
     'ielts:view',
     'content:view',
-    'community:view', 'community:moderate', 'community:delete',
     'subscriptions:view',
   ],
 }

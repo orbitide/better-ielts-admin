@@ -10,7 +10,6 @@ export type Permission =
   | 'users:view' | 'users:edit' | 'users:delete' | 'users:ban'
   | 'ielts:view' | 'ielts:edit' | 'ielts:delete'
   | 'content:view' | 'content:edit' | 'content:publish' | 'content:delete'
-  | 'community:view' | 'community:moderate' | 'community:delete'
   | 'subscriptions:view'
   | 'admins:manage'
 

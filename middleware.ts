@@ -33,7 +33,6 @@ export const config = {
     '/users/:path*',
     '/ielts/:path*',
     '/content/:path*',
-    '/community/:path*',
     '/subscriptions/:path*',
     '/profile/:path*',
     '/settings/:path*',

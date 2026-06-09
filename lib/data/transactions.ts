@@ -1,10 +1,6 @@
 import { cache } from 'react'
-import { delay } from '@/lib/utils/delay'
-import { mockTransactions } from '@/lib/mock/transactions'
+import { fetchRecentTransactions } from '@/lib/api/admin'
 
 export const getRecentTransactions = cache(async () => {
-  await delay(150)
-  return [...mockTransactions]
-    .sort((a, b) => b.paidAt.localeCompare(a.paidAt))
-    .slice(0, 5)
+  return fetchRecentTransactions()
 })

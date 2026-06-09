@@ -1,8 +1,7 @@
 import { cache } from 'react'
-import { delay } from '@/lib/utils/delay'
-import { mockSubscriptions } from '@/lib/mock/subscriptions'
+import { fetchAdminSubscriptions } from '@/lib/api/admin'
 
-export const getSubscriptions = cache(async () => {
-  await delay(150)
-  return mockSubscriptions
+export const getSubscriptions = cache(async (page = 1, pageSize = 50) => {
+  const result = await fetchAdminSubscriptions(page, pageSize)
+  return result.items
 })
