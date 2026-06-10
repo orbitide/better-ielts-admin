@@ -1,16 +1,22 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, ChevronUp, ChevronDown, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
 import { Modal } from '@/components/ui/Modal'
+import { Badge } from '@/components/ui/Badge'
 import { ListeningQuestionFormModal } from './ListeningQuestionFormModal'
 import { QuestionsDataTable } from './QuestionsDataTable'
-import type { FullListeningTest, ListeningSection, ListeningQuestion, SetContext } from '@/lib/types/ielts'
+import { TableNodeFormModal } from './layout/TableNodeFormModal'
+import { McqGroupNodeFormModal } from './layout/McqGroupNodeFormModal'
+import { GapFillNodeFormModal } from './layout/GapFillNodeFormModal'
+import { ImageLabelNodeFormModal } from './layout/ImageLabelNodeFormModal'
+import type { FullListeningTest, ListeningSection, ListeningQuestion, ListeningLayoutNode, SetContext } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
 import { updateListeningTest } from '@/lib/api/ielts'
+import { getLayoutAnswerKeys } from '@/lib/utils/listening-layout'
 
 const typeLabels: Record<ListeningQuestion['type'], string> = {
   mcq: 'MCQ',
@@ -26,6 +32,30 @@ const typeVariants: Record<ListeningQuestion['type'], 'secondary' | 'warning' | 
 
 const textareaClass =
   'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none'
+
+const layoutNodeMeta: Record<ListeningLayoutNode['type'], { label: string; variant: 'secondary' | 'success' | 'warning' | 'default' }> = {
+  table: { label: 'Table', variant: 'secondary' },
+  mcq_group: { label: 'MCQ Group', variant: 'success' },
+  gap_fill: { label: 'Gap Fill', variant: 'warning' },
+  image_label: { label: 'Image Label', variant: 'default' },
+}
+
+function layoutNodeTitle(node: ListeningLayoutNode): string {
+  if (node.title) return node.title
+  return `Untitled ${layoutNodeMeta[node.type].label}`
+}
+
+function layoutNodeQuestionRange(node: ListeningLayoutNode): string {
+  const numbers = getLayoutAnswerKeys([node]).map((k) => k.questionNumber)
+  if (numbers.length === 0) return '—'
+  const min = Math.min(...numbers)
+  const max = Math.max(...numbers)
+  return min === max ? `Q${min}` : `Q${min}-${max}`
+}
+
+function layoutStorageKey(sectionId: string) {
+  return `better-ielts-admin:listening-layout:${sectionId}`
+}
 
 function formatDuration(seconds: number) {
   const m = Math.floor(seconds / 60)
@@ -46,6 +76,86 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
   const [questionModalOpen, setQuestionModalOpen] = useState(false)
   const [editingQuestion, setEditingQuestion] = useState<ListeningQuestion | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ListeningQuestion | null>(null)
+
+  // Layout (Beta) — persisted to localStorage only until the backend phase lands.
+  const [layoutNodes, setLayoutNodes] = useState<ListeningLayoutNode[]>(initialSection.layout?.nodes ?? [])
+  const [layoutDirty, setLayoutDirty] = useState(false)
+  const [editingLayoutNode, setEditingLayoutNode] = useState<ListeningLayoutNode | null>(null)
+  const [tableModalOpen, setTableModalOpen] = useState(false)
+  const [mcqModalOpen, setMcqModalOpen] = useState(false)
+  const [gapFillModalOpen, setGapFillModalOpen] = useState(false)
+  const [imageLabelModalOpen, setImageLabelModalOpen] = useState(false)
+  const [deleteLayoutTarget, setDeleteLayoutTarget] = useState<ListeningLayoutNode | null>(null)
+
+  useEffect(() => {
+    const stored = localStorage.getItem(layoutStorageKey(section.id))
+    if (stored) {
+      try {
+        setLayoutNodes(JSON.parse(stored))
+        return
+      } catch { /* ignore corrupted localStorage data */ }
+    }
+    setLayoutNodes(section.layout?.nodes ?? [])
+  }, [section.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reflects the in-progress layout draft for this section so question-number
+  // suggestions in the node editors account for nodes added earlier in this session.
+  const effectiveTest: FullListeningTest = {
+    ...test,
+    sections: test.sections.map((s) => (s.id === section.id ? { ...s, layout: { nodes: layoutNodes } } : s)),
+  }
+
+  const handleSaveLayout = () => {
+    localStorage.setItem(layoutStorageKey(section.id), JSON.stringify(layoutNodes))
+    setLayoutDirty(false)
+  }
+
+  const handleSaveLayoutNode = (node: ListeningLayoutNode) => {
+    setLayoutNodes((prev) => {
+      const index = prev.findIndex((n) => n.id === node.id)
+      if (index >= 0) {
+        const next = [...prev]
+        next[index] = node
+        return next
+      }
+      return [...prev, node]
+    })
+    setLayoutDirty(true)
+  }
+
+  const openAddLayoutModal = (type: ListeningLayoutNode['type']) => {
+    setEditingLayoutNode(null)
+    if (type === 'table') setTableModalOpen(true)
+    else if (type === 'mcq_group') setMcqModalOpen(true)
+    else if (type === 'gap_fill') setGapFillModalOpen(true)
+    else setImageLabelModalOpen(true)
+  }
+
+  const handleEditLayoutNode = (node: ListeningLayoutNode) => {
+    setEditingLayoutNode(node)
+    if (node.type === 'table') setTableModalOpen(true)
+    else if (node.type === 'mcq_group') setMcqModalOpen(true)
+    else if (node.type === 'gap_fill') setGapFillModalOpen(true)
+    else setImageLabelModalOpen(true)
+  }
+
+  const moveLayoutNode = (index: number, direction: -1 | 1) => {
+    setLayoutNodes((prev) => {
+      const target = index + direction
+      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+    setLayoutDirty(true)
+  }
+
+  const handleDeleteLayoutNode = () => {
+    if (!deleteLayoutTarget) return
+    setLayoutNodes((prev) => prev.filter((n) => n.id !== deleteLayoutTarget.id))
+    setLayoutDirty(true)
+    setDeleteLayoutTarget(null)
+  }
 
   const persistTestWith = async (updatedSection: ListeningSection) => {
     const updatedTest = { ...test, sections: test.sections.map(s => s.id === updatedSection.id ? updatedSection : s) }
@@ -173,6 +283,99 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
             />
           )}
         </div>
+
+        {/* Layout (Beta) */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Layout ({layoutNodes.length})
+              </h2>
+              <Badge variant="outline">Beta</Badge>
+            </div>
+            {layoutDirty && (
+              <Button size="sm" onClick={handleSaveLayout}>Save Layout</Button>
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Build richer question formats (tables, grouped MCQs, gap-fill passages, image labelling). Saved locally on this device for now.
+          </p>
+
+          <RoleGate permission="ielts:edit">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => openAddLayoutModal('table')}>
+                <Plus className="h-3.5 w-3.5" /> Table
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => openAddLayoutModal('mcq_group')}>
+                <Plus className="h-3.5 w-3.5" /> MCQ Group
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => openAddLayoutModal('gap_fill')}>
+                <Plus className="h-3.5 w-3.5" /> Gap Fill
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => openAddLayoutModal('image_label')}>
+                <Plus className="h-3.5 w-3.5" /> Image Label
+              </Button>
+            </div>
+          </RoleGate>
+
+          {layoutNodes.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border py-10 text-center">
+              <p className="text-sm text-muted-foreground">No layout blocks yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {layoutNodes.map((node, index) => (
+                <div key={node.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+                  <RoleGate permission="ielts:edit">
+                    <div className="flex flex-col gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => moveLayoutNode(index, -1)}
+                        disabled={index === 0}
+                        className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveLayoutNode(index, 1)}
+                        disabled={index === layoutNodes.length - 1}
+                        className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </RoleGate>
+
+                  <Badge variant={layoutNodeMeta[node.type].variant}>{layoutNodeMeta[node.type].label}</Badge>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{layoutNodeTitle(node)}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{layoutNodeQuestionRange(node)}</p>
+                  </div>
+
+                  <RoleGate permission="ielts:edit">
+                    <button
+                      onClick={() => handleEditLayoutNode(node)}
+                      className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </RoleGate>
+                  <RoleGate permission="ielts:delete">
+                    <button
+                      onClick={() => setDeleteLayoutTarget(node)}
+                      className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </RoleGate>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title="Delete Question">
@@ -191,6 +394,52 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
         editing={editingQuestion}
         nextQuestionNumber={sortedQuestions.length + 1}
         onSave={handleQuestionSave}
+      />
+
+      <Modal open={deleteLayoutTarget !== null} onClose={() => setDeleteLayoutTarget(null)} title="Delete Layout Block">
+        <p className="text-sm text-muted-foreground mb-6">
+          Are you sure you want to delete this{' '}
+          <span className="font-semibold text-foreground">
+            {deleteLayoutTarget ? layoutNodeMeta[deleteLayoutTarget.type].label : ''}
+          </span>{' '}
+          block ({deleteLayoutTarget ? layoutNodeQuestionRange(deleteLayoutTarget) : ''})? This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setDeleteLayoutTarget(null)}>Cancel</Button>
+          <Button variant="destructive" size="sm" onClick={handleDeleteLayoutNode}>Delete</Button>
+        </div>
+      </Modal>
+
+      <TableNodeFormModal
+        open={tableModalOpen}
+        onClose={() => { setTableModalOpen(false); setEditingLayoutNode(null) }}
+        editing={editingLayoutNode?.type === 'table' ? editingLayoutNode : null}
+        test={effectiveTest}
+        onSave={handleSaveLayoutNode}
+      />
+
+      <McqGroupNodeFormModal
+        open={mcqModalOpen}
+        onClose={() => { setMcqModalOpen(false); setEditingLayoutNode(null) }}
+        editing={editingLayoutNode?.type === 'mcq_group' ? editingLayoutNode : null}
+        test={effectiveTest}
+        onSave={handleSaveLayoutNode}
+      />
+
+      <GapFillNodeFormModal
+        open={gapFillModalOpen}
+        onClose={() => { setGapFillModalOpen(false); setEditingLayoutNode(null) }}
+        editing={editingLayoutNode?.type === 'gap_fill' ? editingLayoutNode : null}
+        test={effectiveTest}
+        onSave={handleSaveLayoutNode}
+      />
+
+      <ImageLabelNodeFormModal
+        open={imageLabelModalOpen}
+        onClose={() => { setImageLabelModalOpen(false); setEditingLayoutNode(null) }}
+        editing={editingLayoutNode?.type === 'image_label' ? editingLayoutNode : null}
+        test={effectiveTest}
+        onSave={handleSaveLayoutNode}
       />
     </>
   )
