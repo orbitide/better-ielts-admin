@@ -1,4 +1,4 @@
-import clientApi from '@/lib/api/client'
+import http from '@/lib/api/http'
 import type { AdminUser } from '@/lib/types/admin'
 
 type ApiLoginResponse = {
@@ -25,7 +25,7 @@ export async function loginAction(
   password: string
 ): Promise<{ ok: true; admin: AdminUser } | { ok: false; error: string }> {
   try {
-    const { data } = await clientApi.post<ApiLoginResponse>('/api/admin/auth/login', { email, password })
+    const { data } = await http.post<ApiLoginResponse>('/api/admin/auth/login', { email, password })
 
     if (!data.success || !data.data?.token) {
       return { ok: false, error: data.message ?? 'Invalid email or password.' }
@@ -49,7 +49,7 @@ export async function loginAction(
 
 export async function logoutAction(): Promise<void> {
   try {
-    await clientApi.post('/api/admin/auth/logout')
+    await http.post('/api/admin/auth/logout')
   } catch {
     // Ignore — session will expire naturally
   }
@@ -57,7 +57,7 @@ export async function logoutAction(): Promise<void> {
 
 export async function refreshAction(): Promise<boolean> {
   try {
-    const { data } = await clientApi.post<{ success: boolean }>('/api/admin/auth/refresh')
+    const { data } = await http.post<{ success: boolean }>('/api/admin/auth/refresh')
     return data.success ?? false
   } catch {
     return false

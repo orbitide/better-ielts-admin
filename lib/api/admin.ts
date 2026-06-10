@@ -1,6 +1,6 @@
 'use server'
 
-import serverApi from '@/lib/api/server'
+import http from '@/lib/api/http'
 import type { User } from '@/lib/types/user'
 import type {
   DashboardStats,
@@ -44,23 +44,23 @@ export async function fetchAdminUsers(page = 1, pageSize = 20, search?: string, 
   const params: Record<string, string | number> = { page, pageSize }
   if (search) params.search = search
   if (plan) params.plan = plan
-  const { data } = await serverApi.get('/api/admin/users', { params })
+  const { data } = await http.get('/api/admin/users', { params })
   const result = data.data as { items: ApiUser[]; totalCount: number; page: number; pageSize: number }
   return { ...result, items: result.items.map(mapUser) }
 }
 
 export async function fetchAdminUserById(id: string): Promise<User> {
-  const { data } = await serverApi.get(`/api/admin/users/${id}`)
+  const { data } = await http.get(`/api/admin/users/${id}`)
   return mapUser(data.data as ApiUser)
 }
 
 export async function updateAdminUser(id: string, body: { plan?: string; isActive?: boolean }): Promise<User> {
-  const { data } = await serverApi.patch(`/api/admin/users/${id}`, body)
+  const { data } = await http.patch(`/api/admin/users/${id}`, body)
   return mapUser(data.data as ApiUser)
 }
 
 export async function deleteAdminUser(id: string): Promise<void> {
-  await serverApi.delete(`/api/admin/users/${id}`)
+  await http.delete(`/api/admin/users/${id}`)
 }
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ export async function fetchAdminStats(): Promise<{
   subscriptionBreakdown: { plan: string; count: number; percentage: number }[]
   contentCounts: ApiStats['contentCounts']
 }> {
-  const { data } = await serverApi.get('/api/admin/stats')
+  const { data } = await http.get('/api/admin/stats')
   const s = data.data as ApiStats
   return {
     stats: {
@@ -142,7 +142,7 @@ function mapSubscription(s: ApiSubscription): SubscriptionRecord {
 }
 
 export async function fetchAdminSubscriptions(page = 1, pageSize = 20) {
-  const { data } = await serverApi.get('/api/admin/subscriptions', { params: { page, pageSize } })
+  const { data } = await http.get('/api/admin/subscriptions', { params: { page, pageSize } })
   const result = data.data as { items: ApiSubscription[]; totalCount: number; page: number; pageSize: number }
   return { ...result, items: result.items.map(mapSubscription) }
 }
@@ -151,7 +151,7 @@ export async function updateSubscription(
   id: string,
   body: { plan: string; status: string; renewsAt: string }
 ): Promise<SubscriptionRecord> {
-  const { data } = await serverApi.patch(`/api/admin/subscriptions/${id}`, body)
+  const { data } = await http.patch(`/api/admin/subscriptions/${id}`, body)
   return mapSubscription(data.data as ApiSubscription)
 }
 
@@ -175,7 +175,7 @@ export async function fetchRecentTransactions(): Promise<Transaction[]> {
 // ─── Audit Log ───────────────────────────────────────────────────────────────
 
 export async function fetchAuditLog(): Promise<AuditLogEntry[]> {
-  const { data } = await serverApi.get('/api/admin/auth/audit')
+  const { data } = await http.get('/api/admin/auth/audit')
   const logs = data.data as Array<{
     id: string
     adminId: string | null
@@ -195,7 +195,7 @@ export async function fetchAuditLog(): Promise<AuditLogEntry[]> {
 // ─── Admins ───────────────────────────────────────────────────────────────────
 
 export async function fetchAdminAdmins(): Promise<ManagedAdmin[]> {
-  const { data } = await serverApi.get('/api/admin/users', { params: { pageSize: 100 } })
+  const { data } = await http.get('/api/admin/users', { params: { pageSize: 100 } })
   const result = data.data as { items: ApiUser[] }
   return result.items.map((u) => ({
     id: u.id,

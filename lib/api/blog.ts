@@ -1,33 +1,5 @@
-import axios from 'axios'
+import http from '@/lib/api/http'
 import type { BlogPost, BlogCategory } from '@/lib/types/content'
-
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000').replace(/\/$/, '')
-
-const api = axios.create({
-  baseURL: `${API_URL}/api/admin/blog`,
-  withCredentials: true,
-  headers: { 'Content-Type': 'application/json' },
-})
-
-api.interceptors.request.use(async (config) => {
-  if (typeof window === 'undefined') {
-    try {
-      const { cookies } = await import('next/headers')
-      const store = await cookies()
-      const token = store.get('admin_access')?.value
-      if (token) config.headers.Authorization = `Bearer ${token}`
-    } catch { /* outside request context */ }
-  }
-  return config
-})
-
-api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    const message = err.response?.data?.message ?? err.message ?? 'Request failed'
-    return Promise.reject(new Error(message))
-  }
-)
 
 type ApiPost = {
   id: string
@@ -127,8 +99,8 @@ export type BlogPostsPage = {
 }
 
 export async function fetchBlogPosts(page = 1, pageSize = 20): Promise<BlogPostsPage> {
-  const { data } = await api.get<{ data: PagedResult<ApiPostSummary> }>(
-    `/posts?page=${page}&pageSize=${pageSize}`
+  const { data } = await http.get<{ data: PagedResult<ApiPostSummary> }>(
+    `/api/admin/blog/posts?page=${page}&pageSize=${pageSize}`
   )
   const result = data.data
   return {
@@ -141,12 +113,12 @@ export async function fetchBlogPosts(page = 1, pageSize = 20): Promise<BlogPosts
 }
 
 export async function fetchBlogPostById(id: string): Promise<BlogPost> {
-  const { data } = await api.get<{ data: ApiPost }>(`/posts/${id}`)
+  const { data } = await http.get<{ data: ApiPost }>(`/api/admin/blog/posts/${id}`)
   return mapDetail(data.data)
 }
 
 export async function fetchBlogCategories(): Promise<BlogCategory[]> {
-  const { data } = await api.get<{ data: ApiCategory[] }>('/categories')
+  const { data } = await http.get<{ data: ApiCategory[] }>('/api/admin/blog/categories')
   return data.data.map(mapCategory)
 }
 
@@ -162,29 +134,29 @@ type CreatePostPayload = {
 }
 
 export async function createBlogPost(payload: CreatePostPayload): Promise<BlogPost> {
-  const { data } = await api.post<{ data: ApiPost }>('/posts', payload)
+  const { data } = await http.post<{ data: ApiPost }>('/api/admin/blog/posts', payload)
   return mapDetail(data.data)
 }
 
 export async function updateBlogPost(id: string, payload: CreatePostPayload): Promise<BlogPost> {
-  const { data } = await api.put<{ data: ApiPost }>(`/posts/${id}`, payload)
+  const { data } = await http.put<{ data: ApiPost }>(`/api/admin/blog/posts/${id}`, payload)
   return mapDetail(data.data)
 }
 
 export async function deleteBlogPost(id: string): Promise<void> {
-  await api.delete(`/posts/${id}`)
+  await http.delete(`/api/admin/blog/posts/${id}`)
 }
 
 export async function createBlogCategory(name: string, description: string): Promise<BlogCategory> {
-  const { data } = await api.post<{ data: ApiCategory }>('/categories', { name, description })
+  const { data } = await http.post<{ data: ApiCategory }>('/api/admin/blog/categories', { name, description })
   return mapCategory(data.data)
 }
 
 export async function updateBlogCategory(id: string, name: string, description: string): Promise<BlogCategory> {
-  const { data } = await api.put<{ data: ApiCategory }>(`/categories/${id}`, { name, description })
+  const { data } = await http.put<{ data: ApiCategory }>(`/api/admin/blog/categories/${id}`, { name, description })
   return mapCategory(data.data)
 }
 
 export async function deleteBlogCategory(id: string): Promise<void> {
-  await api.delete(`/categories/${id}`)
+  await http.delete(`/api/admin/blog/categories/${id}`)
 }

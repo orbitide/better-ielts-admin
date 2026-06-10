@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import axios from 'axios'
-import clientApi from '@/lib/api/client'
+import http from '@/lib/api/http'
 
 const roleLabels: Record<string, string> = {
   SuperAdmin: 'Super Admin',
@@ -42,7 +42,7 @@ export default function ProfilePage() {
 
     setPwLoading(true)
     try {
-      const { data: json } = await clientApi.post('/api/admin/auth/change-password', {
+      const { data: json } = await http.post('/api/admin/auth/change-password', {
         currentPassword,
         newPassword,
         confirmPassword,
