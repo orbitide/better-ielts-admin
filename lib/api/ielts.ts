@@ -3,7 +3,7 @@ import type {
   ReadingTest, FullReadingTest, ReadingSection, ReadingQuestion,
   McqQuestion, TfngQuestion, MatchingQuestion, FillBlankQuestion,
   McqOption, MatchingOption,
-  ListeningTest, FullListeningTest, ListeningQuestion,
+  ListeningTest, FullListeningTest, ListeningSection, ListeningQuestion,
   WritingTask, FullWritingTask,
   SpeakingSession, FullSpeakingSession,
   VocabTopic, FullVocabTopic, VocabWord, VocabWordDefinition,
@@ -127,7 +127,7 @@ export async function deleteReadingTest(id: string): Promise<void> {
 // ─── Listening ────────────────────────────────────────────────────────────────
 
 type ApiListeningQuestion = { id: string; questionNumber: number; type: string; stem: string; correctAnswer: string; options?: unknown }
-type ApiListeningSection = { id: string; sectionNumber: number; audioUrl: string; audioDurationSeconds: number; transcript: string; questions: ApiListeningQuestion[] }
+type ApiListeningSection = { id: string; sectionNumber: number; audioUrl: string; audioDurationSeconds: number; transcript: string; questions: ApiListeningQuestion[]; layout?: unknown }
 type ApiListeningTestSummary = { id: string; title: string; sectionCount: number; questionCount: number; durationMinutes: number; status: string; createdAt: string }
 type ApiFullListeningTest = { id: string; title: string; durationMinutes: number; status: string; createdAt: string; sections: ApiListeningSection[] }
 
@@ -141,13 +141,13 @@ function mapListeningTestSummary(r: ApiListeningTestSummary): ListeningTest {
 
 function mapFullListeningTest(r: ApiFullListeningTest): FullListeningTest {
   const summary: ListeningTest = { id: r.id, title: r.title, sectionCount: r.sections.length, questionCount: r.sections.reduce((n, s) => n + s.questions.length, 0), durationMinutes: r.durationMinutes, audioUrl: null, status: r.status as IeltsStatus, createdAt: r.createdAt }
-  return { ...summary, sections: r.sections.map(s => ({ id: s.id, sectionNumber: s.sectionNumber as 1|2|3|4, audioUrl: s.audioUrl, audioDurationSeconds: s.audioDurationSeconds, transcript: s.transcript, questions: s.questions.map(mapListeningQuestion) })) }
+  return { ...summary, sections: r.sections.map(s => ({ id: s.id, sectionNumber: s.sectionNumber as 1|2|3|4, audioUrl: s.audioUrl, audioDurationSeconds: s.audioDurationSeconds, transcript: s.transcript, questions: s.questions.map(mapListeningQuestion), layout: s.layout as ListeningSection['layout'] })) }
 }
 
 function mapListeningTestToUpdateRequest(test: FullListeningTest) {
   return {
     title: test.title, durationMinutes: test.durationMinutes, status: test.status,
-    sections: test.sections.map(s => ({ sectionNumber: s.sectionNumber, audioUrl: s.audioUrl, audioDurationSeconds: s.audioDurationSeconds, transcript: s.transcript, questions: s.questions.map(q => ({ questionNumber: q.questionNumber, type: q.type, stem: q.stem, correctAnswer: q.correctAnswer, optionsJson: q.options ? JSON.stringify(q.options) : undefined })) }))
+    sections: test.sections.map(s => ({ sectionNumber: s.sectionNumber, audioUrl: s.audioUrl, audioDurationSeconds: s.audioDurationSeconds, transcript: s.transcript, questions: s.questions.map(q => ({ questionNumber: q.questionNumber, type: q.type, stem: q.stem, correctAnswer: q.correctAnswer, optionsJson: q.options ? JSON.stringify(q.options) : undefined })), layoutJson: s.layout ? JSON.stringify(s.layout) : undefined }))
   }
 }
 

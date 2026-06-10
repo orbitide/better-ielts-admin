@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Plus, ChevronUp, ChevronDown, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -53,10 +53,6 @@ function layoutNodeQuestionRange(node: ListeningLayoutNode): string {
   return min === max ? `Q${min}` : `Q${min}-${max}`
 }
 
-function layoutStorageKey(sectionId: string) {
-  return `better-ielts-admin:listening-layout:${sectionId}`
-}
-
 function formatDuration(seconds: number) {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
@@ -77,9 +73,7 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
   const [editingQuestion, setEditingQuestion] = useState<ListeningQuestion | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ListeningQuestion | null>(null)
 
-  // Layout (Beta) — persisted to localStorage only until the backend phase lands.
-  const [layoutNodes, setLayoutNodes] = useState<ListeningLayoutNode[]>(initialSection.layout?.nodes ?? [])
-  const [layoutDirty, setLayoutDirty] = useState(false)
+  // Layout (Beta) — autosaved to the backend, just like questions.
   const [editingLayoutNode, setEditingLayoutNode] = useState<ListeningLayoutNode | null>(null)
   const [tableModalOpen, setTableModalOpen] = useState(false)
   const [mcqModalOpen, setMcqModalOpen] = useState(false)
@@ -87,40 +81,13 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
   const [imageLabelModalOpen, setImageLabelModalOpen] = useState(false)
   const [deleteLayoutTarget, setDeleteLayoutTarget] = useState<ListeningLayoutNode | null>(null)
 
-  useEffect(() => {
-    const stored = localStorage.getItem(layoutStorageKey(section.id))
-    if (stored) {
-      try {
-        setLayoutNodes(JSON.parse(stored))
-        return
-      } catch { /* ignore corrupted localStorage data */ }
-    }
-    setLayoutNodes(section.layout?.nodes ?? [])
-  }, [section.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const layoutNodes = section.layout?.nodes ?? []
 
-  // Reflects the in-progress layout draft for this section so question-number
-  // suggestions in the node editors account for nodes added earlier in this session.
+  // Reflects the live section state so question-number suggestions in the
+  // node editors account for edits made earlier in this session.
   const effectiveTest: FullListeningTest = {
     ...test,
-    sections: test.sections.map((s) => (s.id === section.id ? { ...s, layout: { nodes: layoutNodes } } : s)),
-  }
-
-  const handleSaveLayout = () => {
-    localStorage.setItem(layoutStorageKey(section.id), JSON.stringify(layoutNodes))
-    setLayoutDirty(false)
-  }
-
-  const handleSaveLayoutNode = (node: ListeningLayoutNode) => {
-    setLayoutNodes((prev) => {
-      const index = prev.findIndex((n) => n.id === node.id)
-      if (index >= 0) {
-        const next = [...prev]
-        next[index] = node
-        return next
-      }
-      return [...prev, node]
-    })
-    setLayoutDirty(true)
+    sections: test.sections.map((s) => (s.id === section.id ? section : s)),
   }
 
   const openAddLayoutModal = (type: ListeningLayoutNode['type']) => {
@@ -137,24 +104,6 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
     else if (node.type === 'mcq_group') setMcqModalOpen(true)
     else if (node.type === 'gap_fill') setGapFillModalOpen(true)
     else setImageLabelModalOpen(true)
-  }
-
-  const moveLayoutNode = (index: number, direction: -1 | 1) => {
-    setLayoutNodes((prev) => {
-      const target = index + direction
-      if (target < 0 || target >= prev.length) return prev
-      const next = [...prev]
-      ;[next[index], next[target]] = [next[target], next[index]]
-      return next
-    })
-    setLayoutDirty(true)
-  }
-
-  const handleDeleteLayoutNode = () => {
-    if (!deleteLayoutTarget) return
-    setLayoutNodes((prev) => prev.filter((n) => n.id !== deleteLayoutTarget.id))
-    setLayoutDirty(true)
-    setDeleteLayoutTarget(null)
   }
 
   const persistTestWith = async (updatedSection: ListeningSection) => {
@@ -193,6 +142,43 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
       return updatedSection
     })
     setDeleteTarget(null)
+  }
+
+  const handleSaveLayoutNode = (node: ListeningLayoutNode) => {
+    setSection((prev) => {
+      const nodes = prev.layout?.nodes ?? []
+      const index = nodes.findIndex((n) => n.id === node.id)
+      const updatedNodes = index >= 0
+        ? nodes.map((n, i) => (i === index ? node : n))
+        : [...nodes, node]
+      const updatedSection = { ...prev, layout: { nodes: updatedNodes } }
+      persistTestWith(updatedSection)
+      return updatedSection
+    })
+  }
+
+  const moveLayoutNode = (index: number, direction: -1 | 1) => {
+    setSection((prev) => {
+      const nodes = prev.layout?.nodes ?? []
+      const target = index + direction
+      if (target < 0 || target >= nodes.length) return prev
+      const updatedNodes = [...nodes]
+      ;[updatedNodes[index], updatedNodes[target]] = [updatedNodes[target], updatedNodes[index]]
+      const updatedSection = { ...prev, layout: { nodes: updatedNodes } }
+      persistTestWith(updatedSection)
+      return updatedSection
+    })
+  }
+
+  const handleDeleteLayoutNode = () => {
+    if (!deleteLayoutTarget) return
+    setSection((prev) => {
+      const nodes = (prev.layout?.nodes ?? []).filter((n) => n.id !== deleteLayoutTarget.id)
+      const updatedSection = { ...prev, layout: { nodes } }
+      persistTestWith(updatedSection)
+      return updatedSection
+    })
+    setDeleteLayoutTarget(null)
   }
 
   const sortedQuestions = [...section.questions].sort((a, b) => a.questionNumber - b.questionNumber)
@@ -293,13 +279,10 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
               </h2>
               <Badge variant="outline">Beta</Badge>
             </div>
-            {layoutDirty && (
-              <Button size="sm" onClick={handleSaveLayout}>Save Layout</Button>
-            )}
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Build richer question formats (tables, grouped MCQs, gap-fill passages, image labelling). Saved locally on this device for now.
+            Build richer question formats (tables, grouped MCQs, gap-fill passages, image labelling). Changes save automatically.
           </p>
 
           <RoleGate permission="ielts:edit">

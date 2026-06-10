@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, BookMarked, Headphones, PenLine, Mic, Layers2, Brain,
   FileText, GraduationCap, BarChart2, CreditCard, ChevronLeft, ChevronRight,
-  LogOut, User, Settings, ChevronUp, ShieldCheck, KeyRound,
+  LogOut, User, Settings, ChevronUp, ShieldCheck, KeyRound, Phone,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/utils'
 import { useUIStore } from '@/lib/store/ui-store'
@@ -41,6 +41,7 @@ const navGroups: NavGroup[] = [
       { href: '/ielts/writing', label: 'Writing', icon: PenLine },
       { href: '/ielts/speaking', label: 'Speaking', icon: Mic },
       { href: '/ielts/vocabulary', label: 'Vocabulary', icon: Brain },
+      { href: '/calls/topics', label: 'Call Topics', icon: Phone },
     ],
   },
   {

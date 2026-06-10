@@ -79,73 +79,62 @@ export function WritingTaskDetailShell({ task: initial, setContext }: WritingTas
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left column */}
-        <div className="space-y-4">
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Title</label>
+          <Input value={task.title} onChange={(e) => update('title', e.target.value)} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Title</label>
-            <Input value={task.title} onChange={(e) => update('title', e.target.value)} />
+            <label className="text-sm font-medium">Task Type</label>
+            <Select value={task.type} onChange={(e) => update('type', e.target.value as 'task1' | 'task2')} className="w-full">
+              <option value="task1">Task 1</option>
+              <option value="task2">Task 2</option>
+            </Select>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Task Type</label>
-              <Select value={task.type} onChange={(e) => update('type', e.target.value as 'task1' | 'task2')} className="w-full">
-                <option value="task1">Task 1</option>
-                <option value="task2">Task 2</option>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Status</label>
-              <Select value={task.status} onChange={(e) => update('status', e.target.value as IeltsStatus)} className="w-full">
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Min Words</label>
-              <Input type="number" min={50} value={task.wordMinimum} onChange={(e) => update('wordMinimum', Number(e.target.value))} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Time (min)</label>
-              <Input type="number" min={1} value={task.timeMinutes} onChange={(e) => update('timeMinutes', Number(e.target.value))} />
-            </div>
-          </div>
-
-          {task.type === 'task1' && (
-            <ImagePickerField
-              label="Task Image"
-              value={task.imageUrl}
-              onChange={(url) => update('imageUrl', url)}
-              folder="writing"
-            />
-          )}
-
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Prompt</label>
-            <textarea
-              value={task.prompt}
-              onChange={(e) => update('prompt', e.target.value)}
-              rows={6}
-              className={textareaClass}
-              placeholder="Enter the writing task prompt…"
-            />
+            <label className="text-sm font-medium">Status</label>
+            <Select value={task.status} onChange={(e) => update('status', e.target.value as IeltsStatus)} className="w-full">
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </Select>
           </div>
         </div>
 
-        {/* Right column */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Min Words</label>
+            <Input type="number" min={50} value={task.wordMinimum} onChange={(e) => update('wordMinimum', Number(e.target.value))} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Time (min)</label>
+            <Input type="number" min={1} value={task.timeMinutes} onChange={(e) => update('timeMinutes', Number(e.target.value))} />
+          </div>
+        </div>
+
+        {task.type === 'task1' && (
+          <ImagePickerField
+            label="Task Image"
+            value={task.imageUrl}
+            onChange={(url) => update('imageUrl', url)}
+            folder="writing"
+          />
+        )}
+
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Sample Answer</label>
+          <label className="text-sm font-medium">{task.type === 'task1' ? 'Task Description' : 'Essay Question'}</label>
           <textarea
-            value={task.sampleAnswer}
-            onChange={(e) => update('sampleAnswer', e.target.value)}
-            rows={22}
-            className={`${textareaClass} h-full min-h-[380px]`}
-            placeholder="Enter a model/sample answer…"
+            value={task.prompt}
+            onChange={(e) => update('prompt', e.target.value)}
+            rows={14}
+            className={textareaClass}
+            placeholder={
+              task.type === 'task1'
+                ? 'Describe the chart, graph, table, or diagram and what the candidate should do…'
+                : 'Enter the essay question, e.g. "Some people believe... Discuss both views and give your opinion."'
+            }
           />
         </div>
       </div>
