@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import Link from 'next/link'
 import { type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
@@ -45,6 +45,9 @@ const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = 
 
 export function ContentTable({ title, description, initialRows, onNew, onEdit, onApiDelete, manageHrefPrefix, filterSlot }: ContentTableProps) {
   const [rows, setRows] = useState(initialRows)
+  useEffect(() => {
+    setRows(initialRows)
+  }, [initialRows])
   const [query, setQuery] = useState('')
   const [, startTransition] = useTransition()
   const [deleteTarget, setDeleteTarget] = useState<ContentRow | null>(null)
