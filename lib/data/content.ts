@@ -2,7 +2,7 @@ import { cache } from 'react'
 import { fetchBlogPosts, fetchBlogPostById, fetchBlogCategories } from '@/lib/api/blog'
 import type { BlogPostsPage } from '@/lib/api/blog'
 import type { ExamGuideSection, BandTable } from '@/lib/types/content'
-import http from '@/lib/api/http'
+import httpClient from '@/lib/api/http'
 
 export const getBlogPosts = cache(async (page = 1, pageSize = 20) => {
   return fetchBlogPosts(page, pageSize)
@@ -18,7 +18,7 @@ export const getBlogPostById = cache(async (id: string) => {
 
 export const getExamGuideSections = cache(async (): Promise<ExamGuideSection[]> => {
   try {
-    const { data } = await http.get('/api/admin/content/exam-guide')
+    const { data } = await httpClient.get('/api/admin/content/exam-guide')
     const guide = data.data as {
       overview: string
       skills: Array<{ skill: string; label: string }>
@@ -47,7 +47,7 @@ export const getExamGuideSections = cache(async (): Promise<ExamGuideSection[]> 
 
 export const getBandTables = cache(async (): Promise<BandTable[]> => {
   try {
-    const { data } = await http.get('/api/admin/content/band-tables')
+    const { data } = await httpClient.get('/api/admin/content/band-tables')
     const tables = data.data as Array<{
       id: string
       skill: string

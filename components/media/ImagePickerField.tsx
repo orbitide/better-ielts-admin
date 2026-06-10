@@ -20,8 +20,8 @@ export function ImagePickerField({ value, onChange, folder, label }: Props) {
       {label && <label className="text-sm font-medium">{label}</label>}
 
       {value ? (
-        <div className="relative rounded-md border border-border overflow-hidden">
-          <img src={value} alt="Selected" className="h-36 w-full object-cover" />
+        <div className="relative rounded-md border border-border overflow-hidden bg-muted/20">
+          <img src={value} alt="Selected" className="h-48 w-full object-contain" />
           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/50 px-2 py-1.5">
             <button
               type="button"

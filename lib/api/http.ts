@@ -2,13 +2,13 @@ import axios from 'axios'
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000').replace(/\/$/, '')
 
-const http = axios.create({
+const httpClient = axios.create({
   baseURL: API_URL,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 })
 
-http.interceptors.request.use(async (config) => {
+httpClient.interceptors.request.use(async (config) => {
   if (typeof window === 'undefined') {
     try {
       const { cookies } = await import('next/headers')
@@ -20,7 +20,7 @@ http.interceptors.request.use(async (config) => {
   return config
 })
 
-http.interceptors.response.use(
+httpClient.interceptors.response.use(
   (res) => res,
   (err) => {
     const message = err.response?.data?.message ?? err.message ?? 'Request failed'
@@ -30,4 +30,4 @@ http.interceptors.response.use(
   }
 )
 
-export default http
+export default httpClient
