@@ -26,7 +26,6 @@ export default async function ReadingPage() {
         })
         .filter(Boolean) as SetFilterOption['tests'],
     }))
-    .filter((s) => s.tests.length > 0)
 
   const createSetOptions: SetOption[] = fullSets
     .filter(Boolean)
@@ -40,7 +39,10 @@ export default async function ReadingPage() {
   const rows: ContentRow[] = tests.map((t) => ({
     id: t.id,
     title: t.title,
-    meta: [t.setName, t.testName, `${t.type} · ${t.passageCount} passages · ${t.questionCount} Qs`].filter(Boolean).join(' · '),
+    setName: t.setName,
+    testName: t.testName,
+    type: t.type,
+    stats: { passages: t.passageCount, questions: t.questionCount },
     status: t.status,
     createdAt: t.createdAt,
   }))
@@ -90,6 +92,10 @@ export default async function ReadingPage() {
       manageHrefPrefix="/ielts/reading"
       setFilters={setFilters}
       createSetOptions={createSetOptions}
+      statsColumns={[
+        { key: 'passages', header: 'Passages' },
+        { key: 'questions', header: 'Questions' },
+      ]}
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}

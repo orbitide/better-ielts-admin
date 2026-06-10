@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { SearchInput } from '@/components/ui/SearchInput'
+import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DataTable, DataTableToolbar, type ColumnDef } from '@/components/ui/DataTable'
 import type { IeltsStatus } from '@/lib/types/ielts'
@@ -18,8 +19,11 @@ import { RoleGate } from '@/components/auth/RoleGate'
 export type ContentRow = {
   id: string
   title: string
-  meta: string
+  meta?: string
+  setName?: string
+  testName?: string
   type?: string
+  stats?: Record<string, string | number>
   testCount?: string
   difficulty?: string
   status: IeltsStatus
@@ -35,6 +39,7 @@ type ContentTableProps = {
   onApiDelete?: (id: string) => Promise<void>
   manageHrefPrefix?: string
   filterSlot?: ReactNode
+  statsColumns?: { key: string; header: string }[]
 }
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
@@ -43,19 +48,23 @@ const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = 
   archived: 'secondary',
 }
 
-export function ContentTable({ title, description, initialRows, onNew, onEdit, onApiDelete, manageHrefPrefix, filterSlot }: ContentTableProps) {
+export function ContentTable({ title, description, initialRows, onNew, onEdit, onApiDelete, manageHrefPrefix, filterSlot, statsColumns }: ContentTableProps) {
   const [rows, setRows] = useState(initialRows)
   useEffect(() => {
     setRows(initialRows)
   }, [initialRows])
   const [query, setQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<IeltsStatus | ''>('')
   const [, startTransition] = useTransition()
   const [deleteTarget, setDeleteTarget] = useState<ContentRow | null>(null)
   const [deleting, setDeleting] = useState(false)
   const router = useRouter()
 
   const filtered = rows.filter((r) =>
-    r.title.toLowerCase().includes(query.toLowerCase())
+    r.title.toLowerCase().includes(query.toLowerCase()) &&
+    (!typeFilter || r.type === typeFilter) &&
+    (!statusFilter || r.status === statusFilter)
   )
 
   const handleDelete = async () => {
@@ -78,7 +87,16 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
     setDeleteTarget(null)
   }
 
-  const hasExpandedCols = rows.length > 0 && rows[0].type !== undefined
+  const isSetsTable = rows.length > 0 && rows[0].testCount !== undefined
+  const showSet = !isSetsTable && rows.some((r) => r.setName !== undefined)
+  const showTest = !isSetsTable && rows.some((r) => r.testName !== undefined)
+  const showType = !isSetsTable && rows.some((r) => r.type !== undefined)
+  const showStats = !isSetsTable && (statsColumns?.length ?? 0) > 0
+  const showDetails = !isSetsTable && !showSet && !showTest && !showType && !showStats
+
+  const typeValues = showType
+    ? [...new Set(rows.map((r) => r.type).filter((t): t is string => t !== undefined))]
+    : []
 
   const columns: ColumnDef<ContentRow>[] = [
     {
@@ -86,7 +104,7 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
       header: 'Title',
       cell: ({ row }) => <span className="font-medium max-w-xs truncate block">{row.original.title}</span>,
     },
-    ...(hasExpandedCols
+    ...(isSetsTable
       ? [
           {
             accessorKey: 'type',
@@ -111,14 +129,63 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
           },
         ] as ColumnDef<ContentRow>[]
       : [
-          {
-            accessorKey: 'meta',
-            header: 'Details',
-            enableSorting: false,
-            cell: ({ row }: { row: { original: ContentRow } }) => <span className="text-muted-foreground">{row.original.meta}</span>,
-            meta: { className: 'hidden sm:table-cell' },
-          },
-        ] as ColumnDef<ContentRow>[]),
+          ...(showSet
+            ? [
+                {
+                  accessorKey: 'setName',
+                  header: 'Set',
+                  enableSorting: false,
+                  cell: ({ row }: { row: { original: ContentRow } }) => <span className="text-muted-foreground">{row.original.setName ?? '—'}</span>,
+                  meta: { className: 'hidden sm:table-cell' },
+                },
+              ] as ColumnDef<ContentRow>[]
+            : []),
+          ...(showTest
+            ? [
+                {
+                  accessorKey: 'testName',
+                  header: 'Test',
+                  enableSorting: false,
+                  cell: ({ row }: { row: { original: ContentRow } }) => <span className="text-muted-foreground">{row.original.testName ?? '—'}</span>,
+                  meta: { className: 'hidden sm:table-cell' },
+                },
+              ] as ColumnDef<ContentRow>[]
+            : []),
+          ...(showType
+            ? [
+                {
+                  accessorKey: 'type',
+                  header: 'Type',
+                  enableSorting: false,
+                  cell: ({ row }: { row: { original: ContentRow } }) => <span className="text-muted-foreground capitalize">{row.original.type}</span>,
+                  meta: { className: 'hidden sm:table-cell' },
+                },
+              ] as ColumnDef<ContentRow>[]
+            : []),
+          ...(showStats
+            ? statsColumns!.map(
+                (sc) =>
+                  ({
+                    id: `stat-${sc.key}`,
+                    header: sc.header,
+                    enableSorting: false,
+                    cell: ({ row }: { row: { original: ContentRow } }) => <span className="text-muted-foreground">{row.original.stats?.[sc.key] ?? '—'}</span>,
+                    meta: { className: 'hidden sm:table-cell' },
+                  }) as ColumnDef<ContentRow>
+              )
+            : []),
+          ...(showDetails
+            ? [
+                {
+                  accessorKey: 'meta',
+                  header: 'Details',
+                  enableSorting: false,
+                  cell: ({ row }: { row: { original: ContentRow } }) => <span className="text-muted-foreground">{row.original.meta}</span>,
+                  meta: { className: 'hidden sm:table-cell' },
+                },
+              ] as ColumnDef<ContentRow>[]
+            : []),
+        ]),
     {
       accessorKey: 'status',
       header: 'Status',
@@ -183,6 +250,20 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
 
       <DataTableToolbar>
         <SearchInput value={query} onChange={setQuery} placeholder={`Search ${title.toLowerCase()}…`} className="max-w-xs" />
+        {typeValues.length > 0 && (
+          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <option value="">All Types</option>
+            {typeValues.map((t) => (
+              <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+            ))}
+          </Select>
+        )}
+        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as IeltsStatus | '')}>
+          <option value="">All Statuses</option>
+          <option value="published">Published</option>
+          <option value="draft">Draft</option>
+          <option value="archived">Archived</option>
+        </Select>
         {filterSlot}
       </DataTableToolbar>
 

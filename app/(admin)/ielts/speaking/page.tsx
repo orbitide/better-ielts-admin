@@ -26,7 +26,6 @@ export default async function SpeakingPage() {
         })
         .filter(Boolean) as SetFilterOption['tests'],
     }))
-    .filter((s) => s.tests.length > 0)
 
   const createSetOptions: SetOption[] = fullSets
     .filter(Boolean)
@@ -40,7 +39,7 @@ export default async function SpeakingPage() {
   const rows: ContentRow[] = sessions.map((s) => ({
     id: s.id,
     title: s.title,
-    meta: `Topic: ${s.topic} · ${s.partCount} parts`,
+    stats: { topic: s.topic, parts: s.partCount },
     status: s.status,
     createdAt: s.createdAt,
   }))
@@ -90,6 +89,10 @@ export default async function SpeakingPage() {
       manageHrefPrefix="/ielts/speaking"
       setFilters={setFilters}
       createSetOptions={createSetOptions}
+      statsColumns={[
+        { key: 'topic', header: 'Topic' },
+        { key: 'parts', header: 'Parts' },
+      ]}
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}

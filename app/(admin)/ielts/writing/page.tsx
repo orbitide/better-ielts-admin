@@ -26,7 +26,6 @@ export default async function WritingPage() {
         })
         .filter(Boolean) as SetFilterOption['tests'],
     }))
-    .filter((s) => s.tests.length > 0)
 
   const createSetOptions: SetOption[] = fullSets
     .filter(Boolean)
@@ -40,7 +39,8 @@ export default async function WritingPage() {
   const rows: ContentRow[] = tasks.map((t) => ({
     id: t.id,
     title: t.title,
-    meta: `${t.type.toUpperCase()} · ${t.wordMinimum}+ words · ${t.timeMinutes} min`,
+    type: t.type,
+    stats: { minWords: `${t.wordMinimum}+`, time: `${t.timeMinutes} min` },
     status: t.status,
     createdAt: t.createdAt,
   }))
@@ -90,6 +90,10 @@ export default async function WritingPage() {
       manageHrefPrefix="/ielts/writing"
       setFilters={setFilters}
       createSetOptions={createSetOptions}
+      statsColumns={[
+        { key: 'minWords', header: 'Min Words' },
+        { key: 'time', header: 'Time' },
+      ]}
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}

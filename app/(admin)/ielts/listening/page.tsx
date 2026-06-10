@@ -26,7 +26,6 @@ export default async function ListeningPage() {
         })
         .filter(Boolean) as SetFilterOption['tests'],
     }))
-    .filter((s) => s.tests.length > 0)
 
   const createSetOptions: SetOption[] = fullSets
     .filter(Boolean)
@@ -40,7 +39,7 @@ export default async function ListeningPage() {
   const rows: ContentRow[] = tests.map((t) => ({
     id: t.id,
     title: t.title,
-    meta: `${t.sectionCount} sections · ${t.questionCount} Qs · ${t.audioUrl ? 'Audio uploaded' : 'No audio'}`,
+    stats: { sections: t.sectionCount, questions: t.questionCount, audio: t.audioUrl ? 'Uploaded' : 'Missing' },
     status: t.status,
     createdAt: t.createdAt,
   }))
@@ -90,6 +89,11 @@ export default async function ListeningPage() {
       manageHrefPrefix="/ielts/listening"
       setFilters={setFilters}
       createSetOptions={createSetOptions}
+      statsColumns={[
+        { key: 'sections', header: 'Sections' },
+        { key: 'questions', header: 'Questions' },
+        { key: 'audio', header: 'Audio' },
+      ]}
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
