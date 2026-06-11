@@ -2,15 +2,20 @@
 
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
 import { Modal } from '@/components/ui/Modal'
+import { DataTablePagination } from '@/components/ui/DataTable/DataTablePagination'
 import { ReadingQuestionFormModal } from './ReadingQuestionFormModal'
 import { QuestionsDataTable } from './QuestionsDataTable'
-import type { FullReadingTest, ReadingSection, ReadingQuestion, SetContext } from '@/lib/types/ielts'
+import type { ReadingTestDetail, ReadingSection, ReadingQuestion, SetContext } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
-import { updateReadingTest } from '@/lib/api/ielts'
+import {
+  fetchReadingQuestions, createReadingQuestion, updateReadingQuestion, deleteReadingQuestion,
+  type ReadingQuestionsPage,
+} from '@/lib/api/ielts'
 
 const typeLabels: Record<ReadingQuestion['type'], string> = {
   mcq: 'MCQ',
@@ -32,50 +37,69 @@ function getStem(q: ReadingQuestion): string {
 }
 
 type ReadingSectionShellProps = {
-  test: FullReadingTest
+  test: ReadingTestDetail
   section: ReadingSection
+  initialQuestionsPage: ReadingQuestionsPage
   setContext?: SetContext
 }
 
-export function ReadingSectionShell({ test, section: initialSection, setContext }: ReadingSectionShellProps) {
+export function ReadingSectionShell({ test, section: initialSection, initialQuestionsPage, setContext }: ReadingSectionShellProps) {
   const [section, setSection] = useState(initialSection)
+  const [questionsPage, setQuestionsPage] = useState(initialQuestionsPage)
+  const [loading, setLoading] = useState(false)
   const [showFullPassage, setShowFullPassage] = useState(false)
   const [questionModalOpen, setQuestionModalOpen] = useState(false)
   const [editingQuestion, setEditingQuestion] = useState<ReadingQuestion | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ReadingQuestion | null>(null)
 
-  const persistTestWith = async (updatedSection: ReadingSection) => {
-    const updatedTest = { ...test, sections: test.sections.map(s => s.id === updatedSection.id ? updatedSection : s) }
-    try { await updateReadingTest(test.id, updatedTest) } catch { /* best-effort */ }
-  }
-
   const handleQuestionSave = async (q: ReadingQuestion) => {
-    setSection((prev) => {
-      const existing = prev.questions.findIndex((x) => x.id === q.id)
-      let updatedSection: ReadingSection
-      if (existing >= 0) {
-        const updated = [...prev.questions]
-        updated[existing] = q
-        updatedSection = { ...prev, questions: updated }
+    setLoading(true)
+    try {
+      if (editingQuestion) {
+        await updateReadingQuestion(editingQuestion.id, q)
       } else {
-        updatedSection = { ...prev, questions: [...prev.questions, q] }
+        await createReadingQuestion(section.id, q)
       }
-      persistTestWith(updatedSection)
-      return updatedSection
-    })
+      const refreshed = await fetchReadingQuestions(section.id, questionsPage.page, questionsPage.pageSize)
+      setQuestionsPage(refreshed)
+      setSection((prev) => ({ ...prev, questionCount: refreshed.totalCount }))
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to save question.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDeleteQuestion = async () => {
     if (!deleteTarget) return
-    setSection((prev) => {
-      const updatedSection = { ...prev, questions: prev.questions.filter((q) => q.id !== deleteTarget.id) }
-      persistTestWith(updatedSection)
-      return updatedSection
-    })
-    setDeleteTarget(null)
+    setLoading(true)
+    try {
+      await deleteReadingQuestion(deleteTarget.id)
+      const remaining = questionsPage.totalCount - 1
+      const targetPage = Math.min(questionsPage.page, Math.max(1, Math.ceil(remaining / questionsPage.pageSize)))
+      const refreshed = await fetchReadingQuestions(section.id, targetPage, questionsPage.pageSize)
+      setQuestionsPage(refreshed)
+      setSection((prev) => ({ ...prev, questionCount: refreshed.totalCount }))
+      setDeleteTarget(null)
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to delete question.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const sortedQuestions = [...section.questions].sort((a, b) => a.questionNumber - b.questionNumber)
+  const handlePageChange = async (page: number) => {
+    setLoading(true)
+    try {
+      const refreshed = await fetchReadingQuestions(section.id, page, questionsPage.pageSize)
+      setQuestionsPage(refreshed)
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to load questions.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const passagePreview = section.passage.body.slice(0, 280)
   const truncated = section.passage.body.length > 280
 
@@ -117,7 +141,7 @@ export function ReadingSectionShell({ test, section: initialSection, setContext 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Questions ({sortedQuestions.length})
+              Questions ({section.questionCount})
             </h2>
             <RoleGate permission="ielts:edit">
               <Button size="sm" onClick={() => { setEditingQuestion(null); setQuestionModalOpen(true) }}>
@@ -127,7 +151,7 @@ export function ReadingSectionShell({ test, section: initialSection, setContext 
             </RoleGate>
           </div>
 
-          {sortedQuestions.length === 0 ? (
+          {questionsPage.items.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border py-10 text-center">
               <p className="text-sm text-muted-foreground">No questions yet.</p>
               <button
@@ -138,14 +162,25 @@ export function ReadingSectionShell({ test, section: initialSection, setContext 
               </button>
             </div>
           ) : (
-            <QuestionsDataTable
-              questions={sortedQuestions}
-              getTypeLabel={(q) => typeLabels[q.type]}
-              getTypeVariant={(q) => typeVariants[q.type]}
-              getStem={getStem}
-              onEdit={(q) => { setEditingQuestion(q); setQuestionModalOpen(true) }}
-              onDelete={setDeleteTarget}
-            />
+            <>
+              <QuestionsDataTable
+                questions={questionsPage.items}
+                getTypeLabel={(q) => typeLabels[q.type]}
+                getTypeVariant={(q) => typeVariants[q.type]}
+                getStem={getStem}
+                onEdit={(q) => { setEditingQuestion(q); setQuestionModalOpen(true) }}
+                onDelete={setDeleteTarget}
+              />
+              <DataTablePagination
+                page={questionsPage.page}
+                totalPages={questionsPage.totalPages}
+                totalCount={questionsPage.totalCount}
+                sourceCount={questionsPage.totalCount}
+                onPageChange={handlePageChange}
+                loading={loading}
+                countLabel={`${questionsPage.totalCount} question${questionsPage.totalCount !== 1 ? 's' : ''}`}
+              />
+            </>
           )}
         </div>
       </div>
@@ -164,7 +199,7 @@ export function ReadingSectionShell({ test, section: initialSection, setContext 
         open={questionModalOpen}
         onClose={() => setQuestionModalOpen(false)}
         editing={editingQuestion}
-        nextQuestionNumber={sortedQuestions.length + 1}
+        nextQuestionNumber={section.questionCount + 1}
         onSave={handleQuestionSave}
       />
     </>

@@ -81,7 +81,7 @@ export function ReadingContentClient() {
 
   async function onUpdate(id: string, data: { title: string; type: string; status: IeltsStatus }) {
     const current = await fetchReadingTestById(id)
-    await updateReadingTest(id, { ...current, title: data.title, type: data.type as 'academic' | 'general', status: data.status })
+    await updateReadingTest(id, { title: data.title, type: data.type, durationMinutes: current.durationMinutes, status: data.status })
   }
 
   async function onDelete(id: string) {

@@ -141,13 +141,19 @@ export type ReadingPassage = {
 
 export type ReadingSection = {
   id: string
+  readingTestId: string
   passageIndex: number
   passage: ReadingPassage
-  questions: ReadingQuestion[]
+  questionCount: number
 }
 
-export type FullReadingTest = ReadingTest & {
-  sections: ReadingSection[]
+export type ReadingTestDetail = {
+  id: string
+  title: string
+  type: 'academic' | 'general'
+  durationMinutes: number
+  status: IeltsStatus
+  createdAt: string
 }
 
 // ─── Listening nested types ───────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { cache } from 'react'
 import {
-  fetchReadingTests, fetchReadingTestById,
+  fetchReadingTests, fetchReadingTestById, fetchReadingSections, fetchReadingSectionById, fetchReadingQuestions,
   fetchListeningTests, fetchListeningTestById,
   fetchWritingTasks, fetchWritingTaskById,
   fetchSpeakingSessions, fetchSpeakingSessionById,
@@ -38,8 +38,20 @@ export const getIeltsSets = cache(async () =>
   (await fetchIeltsSets(1, 100).then(r => r.items).catch(onlyNotFound)) ?? []
 )
 
-export const getFullReadingTest = cache(async (id: string) =>
+export const getReadingTestDetail = cache(async (id: string) =>
   fetchReadingTestById(id).catch(onlyNotFound)
+)
+
+export const getReadingSections = cache(async (testId: string, page = 1, pageSize = 10) =>
+  fetchReadingSections(testId, page, pageSize).catch(onlyNotFound)
+)
+
+export const getReadingSectionDetail = cache(async (sectionId: string) =>
+  fetchReadingSectionById(sectionId).catch(onlyNotFound)
+)
+
+export const getReadingQuestions = cache(async (sectionId: string, page = 1, pageSize = 20) =>
+  fetchReadingQuestions(sectionId, page, pageSize).catch(onlyNotFound)
 )
 
 export const getFullListeningTest = cache(async (id: string) =>

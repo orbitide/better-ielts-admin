@@ -8,12 +8,17 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
+import { DataTablePagination } from '@/components/ui/DataTable/DataTablePagination'
 import { ContentFormModal } from './ContentFormModal'
 import { ReadingSectionFormModal } from './ReadingSectionFormModal'
 import { Breadcrumb } from './Breadcrumb'
-import type { FullReadingTest, ReadingSection, IeltsStatus, SetContext } from '@/lib/types/ielts'
+import type { ReadingTestDetail, ReadingSection, IeltsStatus, SetContext } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
-import { updateReadingTest } from '@/lib/api/ielts'
+import {
+  updateReadingTest,
+  fetchReadingSections, createReadingSection, updateReadingSection, deleteReadingSection,
+  type ReadingSectionsPage,
+} from '@/lib/api/ielts'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
   published: 'success',
@@ -22,16 +27,15 @@ const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = 
 }
 
 type ReadingTestDetailShellProps = {
-  test: FullReadingTest
+  test: ReadingTestDetail
+  initialSectionsPage: ReadingSectionsPage
   setContext?: SetContext
 }
 
-function genId() {
-  return `s-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-}
-
-export function ReadingTestDetailShell({ test: initial, setContext }: ReadingTestDetailShellProps) {
+export function ReadingTestDetailShell({ test: initial, initialSectionsPage, setContext }: ReadingTestDetailShellProps) {
   const [test, setTest] = useState(initial)
+  const [sectionsPage, setSectionsPage] = useState(initialSectionsPage)
+  const [loading, setLoading] = useState(false)
   const [metaModalOpen, setMetaModalOpen] = useState(false)
   const [sectionModalOpen, setSectionModalOpen] = useState(false)
   const [editingSection, setEditingSection] = useState<ReadingSection | null>(null)
@@ -42,7 +46,7 @@ export function ReadingTestDetailShell({ test: initial, setContext }: ReadingTes
     const updated = { ...test, title, type: type as 'academic' | 'general', status }
     setTest(updated)
     try {
-      const saved = await updateReadingTest(test.id, updated)
+      const saved = await updateReadingTest(test.id, { title: updated.title, type: updated.type, durationMinutes: updated.durationMinutes, status: updated.status })
       setTest(saved)
     } catch (err) {
       setTest(prev)
@@ -52,40 +56,51 @@ export function ReadingTestDetailShell({ test: initial, setContext }: ReadingTes
 
   const handleSectionSave = async ({ passageTitle, passageBody, passageIndex }: { passageTitle: string; passageBody: string; passageIndex: number }) => {
     const wordCount = passageBody.trim() ? passageBody.trim().split(/\s+/).length : 0
-    const prev = test
-    let updated: FullReadingTest
-    if (editingSection) {
-      updated = { ...test, sections: test.sections.map((s) => s.id === editingSection.id ? { ...s, passageIndex, passage: { ...s.passage, title: passageTitle, body: passageBody, wordCount } } : s) }
-    } else {
-      const newSection: ReadingSection = { id: genId(), passageIndex, passage: { id: genId(), title: passageTitle, body: passageBody, wordCount }, questions: [] }
-      updated = { ...test, sections: [...test.sections, newSection] }
-    }
-    setTest(updated)
+    const payload = { passageIndex, passage: { title: passageTitle, body: passageBody, wordCount } }
+    setLoading(true)
     try {
-      const saved = await updateReadingTest(test.id, updated)
-      setTest(saved)
+      if (editingSection) {
+        await updateReadingSection(editingSection.id, payload)
+      } else {
+        await createReadingSection(test.id, payload)
+      }
+      const refreshed = await fetchReadingSections(test.id, sectionsPage.page, sectionsPage.pageSize)
+      setSectionsPage(refreshed)
     } catch (err) {
-      setTest(prev)
       toast.error((err as Error).message ?? 'Failed to save section.')
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleDeleteSection = async () => {
     if (!deleteTarget) return
-    const prev = test
-    const updated = { ...test, sections: test.sections.filter((s) => s.id !== deleteTarget.id) }
-    setTest(updated)
-    setDeleteTarget(null)
+    setLoading(true)
     try {
-      const saved = await updateReadingTest(test.id, updated)
-      setTest(saved)
+      await deleteReadingSection(deleteTarget.id)
+      const remaining = sectionsPage.totalCount - 1
+      const targetPage = Math.min(sectionsPage.page, Math.max(1, Math.ceil(remaining / sectionsPage.pageSize)))
+      const refreshed = await fetchReadingSections(test.id, targetPage, sectionsPage.pageSize)
+      setSectionsPage(refreshed)
+      setDeleteTarget(null)
     } catch (err) {
-      setTest(prev)
       toast.error((err as Error).message ?? 'Failed to delete section.')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const sortedSections = [...test.sections].sort((a, b) => a.passageIndex - b.passageIndex)
+  const handlePageChange = async (page: number) => {
+    setLoading(true)
+    try {
+      const refreshed = await fetchReadingSections(test.id, page, sectionsPage.pageSize)
+      setSectionsPage(refreshed)
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to load sections.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <>
@@ -116,13 +131,13 @@ export function ReadingTestDetailShell({ test: initial, setContext }: ReadingTes
           <div className="flex items-center gap-2">
             <Badge variant={statusVariant[test.status]}>{test.status}</Badge>
             <Badge variant="secondary">{test.type}</Badge>
-            <span className="text-xs text-muted-foreground">{test.sections.length} section{test.sections.length !== 1 ? 's' : ''}</span>
+            <span className="text-xs text-muted-foreground">{sectionsPage.totalCount} section{sectionsPage.totalCount !== 1 ? 's' : ''}</span>
           </div>
         </div>
 
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Sections</h2>
-          {sortedSections.length === 0 ? (
+          {sectionsPage.items.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border py-10 text-center">
               <p className="text-sm text-muted-foreground">No sections yet.</p>
               <button
@@ -133,46 +148,57 @@ export function ReadingTestDetailShell({ test: initial, setContext }: ReadingTes
               </button>
             </div>
           ) : (
-            sortedSections.map((section, i) => (
-              <div key={section.id} className="rounded-xl border border-border bg-card p-4 flex items-start gap-4">
-                <div className="rounded-lg bg-muted flex items-center justify-center h-9 w-9 text-sm font-semibold shrink-0">
-                  {i + 1}
-                </div>
-                <div className="flex-1 min-w-0 space-y-0.5">
-                  <p className="font-medium text-sm truncate">{section.passage.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {section.passage.wordCount} words · {section.questions.length} question{section.questions.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Link
-                    href={`/ielts/reading/${test.id}/sections/${section.id}${setContext ? `?setId=${setContext.setId}&setTitle=${encodeURIComponent(setContext.setTitle)}&testId=${setContext.testId}&testIndex=${setContext.testIndex}` : ''}`}
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                    title="Manage section"
-                  >
-                    <Settings2 className="h-3.5 w-3.5" />
-                  </Link>
-                  <RoleGate permission="ielts:edit">
-                    <button
-                      onClick={() => { setEditingSection(section); setSectionModalOpen(true) }}
+            <>
+              {sectionsPage.items.map((section, i) => (
+                <div key={section.id} className="rounded-xl border border-border bg-card p-4 flex items-start gap-4">
+                  <div className="rounded-lg bg-muted flex items-center justify-center h-9 w-9 text-sm font-semibold shrink-0">
+                    {(sectionsPage.page - 1) * sectionsPage.pageSize + i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <p className="font-medium text-sm truncate">{section.passage.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {section.passage.wordCount} words · {section.questionCount} question{section.questionCount !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Link
+                      href={`/ielts/reading/${test.id}/sections/${section.id}${setContext ? `?setId=${setContext.setId}&setTitle=${encodeURIComponent(setContext.setTitle)}&testId=${setContext.testId}&testIndex=${setContext.testIndex}` : ''}`}
                       className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                      title="Edit passage"
+                      title="Manage section"
                     >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                  </RoleGate>
-                  <RoleGate permission="ielts:delete">
-                    <button
-                      onClick={() => setDeleteTarget(section)}
-                      className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
-                      title="Delete section"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </RoleGate>
+                      <Settings2 className="h-3.5 w-3.5" />
+                    </Link>
+                    <RoleGate permission="ielts:edit">
+                      <button
+                        onClick={() => { setEditingSection(section); setSectionModalOpen(true) }}
+                        className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                        title="Edit passage"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    </RoleGate>
+                    <RoleGate permission="ielts:delete">
+                      <button
+                        onClick={() => setDeleteTarget(section)}
+                        className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
+                        title="Delete section"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </RoleGate>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+              <DataTablePagination
+                page={sectionsPage.page}
+                totalPages={sectionsPage.totalPages}
+                totalCount={sectionsPage.totalCount}
+                sourceCount={sectionsPage.totalCount}
+                onPageChange={handlePageChange}
+                loading={loading}
+                countLabel={`${sectionsPage.totalCount} section${sectionsPage.totalCount !== 1 ? 's' : ''}`}
+              />
+            </>
           )}
         </div>
       </div>
@@ -199,7 +225,7 @@ export function ReadingTestDetailShell({ test: initial, setContext }: ReadingTes
         open={sectionModalOpen}
         onClose={() => setSectionModalOpen(false)}
         editing={editingSection}
-        nextPassageIndex={test.sections.length}
+        nextPassageIndex={sectionsPage.totalCount}
         onSave={handleSectionSave}
       />
     </>

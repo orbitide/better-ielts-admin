@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation'
-import { getFullReadingTest } from '@/lib/data/ielts'
+import { getReadingTestDetail, getReadingSections } from '@/lib/data/ielts'
 import { ReadingTestDetailShell } from '@/components/ielts/ReadingTestDetailShell'
 import type { SetContext } from '@/lib/types/ielts'
+
+const SECTIONS_PAGE_SIZE = 10
 
 export default async function ReadingTestDetailPage({
   params,
@@ -12,8 +14,12 @@ export default async function ReadingTestDetailPage({
 }) {
   const { id } = await params
   const sp = await searchParams
-  const test = await getFullReadingTest(id)
+  const test = await getReadingTestDetail(id)
   if (!test) notFound()
+
+  const page = Number(sp.page ?? '1') || 1
+  const sectionsPage = await getReadingSections(id, page, SECTIONS_PAGE_SIZE)
+  if (!sectionsPage) notFound()
 
   const setContext: SetContext | undefined =
     sp.setId && sp.setTitle && sp.testId && sp.testIndex
@@ -25,5 +31,5 @@ export default async function ReadingTestDetailPage({
         }
       : undefined
 
-  return <ReadingTestDetailShell test={test} setContext={setContext} />
+  return <ReadingTestDetailShell test={test} initialSectionsPage={sectionsPage} setContext={setContext} />
 }
