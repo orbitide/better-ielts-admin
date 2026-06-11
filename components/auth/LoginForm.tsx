@@ -43,7 +43,7 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-1.5">
+      <div className="space-y-1.5" suppressHydrationWarning>
         <label className="text-sm font-medium">Email</label>
         <Input
           type="email"
@@ -54,7 +54,7 @@ export function LoginForm() {
         />
         {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1.5" suppressHydrationWarning>
         <label className="text-sm font-medium">Password</label>
         <Input
           type="password"

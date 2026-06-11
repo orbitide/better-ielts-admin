@@ -1,4 +1,8 @@
+'use server'
+
+import { cookies } from 'next/headers'
 import httpClient from '@/lib/api/http'
+import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/auth/session'
 import type { AdminUser } from '@/lib/types/admin'
 
 type ApiLoginResponse = {
@@ -8,6 +12,7 @@ type ApiLoginResponse = {
     token: {
       accessToken: string
       refreshToken: string
+      expiresIn: number
       user: {
         id: string
         name: string
@@ -18,6 +23,30 @@ type ApiLoginResponse = {
     }
   }
   message?: string
+}
+
+type ApiTokenResponse = {
+  success: boolean
+  data?: {
+    accessToken: string
+    refreshToken: string
+    expiresIn: number
+  }
+  message?: string
+}
+
+const REFRESH_MAX_AGE = 60 * 60 * 24 * 30 // 30 days, matches backend refresh token lifetime
+
+async function setAuthCookies(accessToken: string, refreshToken: string, expiresIn: number) {
+  const cookieStore = await cookies()
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+  }
+  cookieStore.set(ACCESS_COOKIE, accessToken, { ...options, maxAge: expiresIn })
+  cookieStore.set(REFRESH_COOKIE, refreshToken, { ...options, maxAge: REFRESH_MAX_AGE })
 }
 
 export async function loginAction(
@@ -31,7 +60,9 @@ export async function loginAction(
       return { ok: false, error: data.message ?? 'Invalid email or password.' }
     }
 
-    const { user } = data.data.token
+    const { accessToken, refreshToken, expiresIn, user } = data.data.token
+    await setAuthCookies(accessToken, refreshToken, expiresIn)
+
     return {
       ok: true,
       admin: {
@@ -53,12 +84,17 @@ export async function logoutAction(): Promise<void> {
   } catch {
     // Ignore — session will expire naturally
   }
+  const cookieStore = await cookies()
+  cookieStore.delete(ACCESS_COOKIE)
+  cookieStore.delete(REFRESH_COOKIE)
 }
 
 export async function refreshAction(): Promise<boolean> {
   try {
-    const { data } = await httpClient.post<{ success: boolean }>('/api/admin/auth/refresh')
-    return data.success ?? false
+    const { data } = await httpClient.post<ApiTokenResponse>('/api/admin/auth/refresh')
+    if (!data.success || !data.data) return false
+    await setAuthCookies(data.data.accessToken, data.data.refreshToken, data.data.expiresIn)
+    return true
   } catch {
     return false
   }

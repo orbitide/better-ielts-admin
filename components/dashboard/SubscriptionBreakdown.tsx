@@ -2,9 +2,16 @@
 
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
-type PieEntry = { name: string; value: number; color: string }
+type SubscriptionBreakdownEntry = { plan: string; count: number; percentage: number }
 
-export function SubscriptionBreakdown({ data }: { data: PieEntry[] }) {
+const PLAN_COLORS: Record<string, string> = {
+  free: '#94a3b8',
+  pro: '#10b981',
+  elite: '#0ea5e9',
+}
+const FALLBACK_COLOR = '#a3a3a3'
+
+export function SubscriptionBreakdown({ data }: { data: SubscriptionBreakdownEntry[] }) {
   return (
     <ResponsiveContainer width="100%" height={200}>
       <PieChart>
@@ -15,10 +22,11 @@ export function SubscriptionBreakdown({ data }: { data: PieEntry[] }) {
           innerRadius={50}
           outerRadius={80}
           paddingAngle={3}
-          dataKey="value"
+          dataKey="count"
+          nameKey="plan"
         >
           {data.map((entry) => (
-            <Cell key={entry.name} fill={entry.color} />
+            <Cell key={entry.plan} fill={PLAN_COLORS[entry.plan.toLowerCase()] ?? FALLBACK_COLOR} />
           ))}
         </Pie>
         <Tooltip

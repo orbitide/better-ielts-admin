@@ -15,27 +15,27 @@ function onlyNotFound(err: unknown): undefined {
 }
 
 export const getReadingTests = cache(async () =>
-  fetchReadingTests(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
+  (await fetchReadingTests(1, 100).then(r => r.items).catch(onlyNotFound)) ?? []
 )
 
 export const getListeningTests = cache(async () =>
-  fetchListeningTests(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
+  (await fetchListeningTests(1, 100).then(r => r.items).catch(onlyNotFound)) ?? []
 )
 
 export const getWritingTasks = cache(async () =>
-  fetchWritingTasks(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
+  (await fetchWritingTasks(1, 100).then(r => r.items).catch(onlyNotFound)) ?? []
 )
 
 export const getSpeakingSessions = cache(async () =>
-  fetchSpeakingSessions(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
+  (await fetchSpeakingSessions(1, 100).then(r => r.items).catch(onlyNotFound)) ?? []
 )
 
 export const getVocabTopics = cache(async () =>
-  fetchVocabTopics(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
+  (await fetchVocabTopics(1, 100).then(r => r.items).catch(onlyNotFound)) ?? []
 )
 
 export const getIeltsSets = cache(async () =>
-  fetchIeltsSets(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
+  (await fetchIeltsSets(1, 100).then(r => r.items).catch(onlyNotFound)) ?? []
 )
 
 export const getFullReadingTest = cache(async (id: string) =>

@@ -8,7 +8,7 @@ function onlyNotFound(err: unknown): undefined {
 }
 
 export const getCallTopics = cache(async () =>
-  fetchCallTopics(1, 100).then(r => r.items).catch(onlyNotFound) ?? []
+  (await fetchCallTopics(1, 100).then(r => r.items).catch(onlyNotFound)) ?? []
 )
 
 export const getFullCallTopic = cache(async (id: string) =>
