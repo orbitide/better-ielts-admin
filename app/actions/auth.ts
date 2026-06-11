@@ -78,6 +78,37 @@ export async function loginAction(
   }
 }
 
+type ApiMeResponse = {
+  success: boolean
+  data?: {
+    id: string
+    name: string
+    email: string
+    role: string
+    avatarUrl: string | null
+  }
+}
+
+export async function meAction(): Promise<{ ok: true; admin: AdminUser } | { ok: false }> {
+  try {
+    const { data } = await httpClient.get<ApiMeResponse>('/api/admin/auth/me')
+    if (!data.success || !data.data) return { ok: false }
+    const user = data.data
+    return {
+      ok: true,
+      admin: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role as AdminUser['role'],
+        avatarUrl: user.avatarUrl ?? '',
+      },
+    }
+  } catch {
+    return { ok: false }
+  }
+}
+
 export async function logoutAction(): Promise<void> {
   try {
     await httpClient.post('/api/admin/auth/logout')
