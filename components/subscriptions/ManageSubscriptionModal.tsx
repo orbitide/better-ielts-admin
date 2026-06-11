@@ -8,15 +8,16 @@ import { Input } from '@/components/ui/Input'
 import type { SubscriptionRecord } from '@/lib/types/admin'
 import { ManageSubscriptionSchema } from '@/lib/validations/subscriptions'
 import { fieldErrors } from '@/lib/validations/utils'
-import { manageSubscriptionAction } from '@/lib/actions/subscriptions'
+import { updateSubscription } from '@/lib/api/admin'
 
 type Props = {
   subscription: SubscriptionRecord | null
   open: boolean
   onClose: () => void
+  onSaved: (subscription: SubscriptionRecord) => void
 }
 
-export function ManageSubscriptionModal({ subscription, open, onClose }: Props) {
+export function ManageSubscriptionModal({ subscription, open, onClose, onSaved }: Props) {
   const [plan, setPlan] = useState<SubscriptionRecord['plan']>('pro')
   const [status, setStatus] = useState<SubscriptionRecord['status']>('active')
   const [renewsAt, setRenewsAt] = useState('')
@@ -41,7 +42,8 @@ export function ManageSubscriptionModal({ subscription, open, onClose }: Props) 
     setErrors({})
     setLoading(true)
     try {
-      await manageSubscriptionAction(subscription!.id, { plan, status: effectiveStatus, renewsAt })
+      const updated = await updateSubscription(subscription!.id, { plan, status: effectiveStatus, renewsAt })
+      onSaved(updated)
       onClose()
     } finally {
       setLoading(false)

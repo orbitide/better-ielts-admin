@@ -73,7 +73,8 @@ function buildColumns(
   ]
 }
 
-export function SubscriptionStats({ subscriptions }: { subscriptions: SubscriptionRecord[] }) {
+export function SubscriptionStats({ subscriptions: initialSubscriptions }: { subscriptions: SubscriptionRecord[] }) {
+  const [subscriptions, setSubscriptions] = useState(initialSubscriptions)
   const [manageSub, setManageSub] = useState<SubscriptionRecord | null>(null)
   const columns = buildColumns(setManageSub)
 
@@ -126,6 +127,7 @@ export function SubscriptionStats({ subscriptions }: { subscriptions: Subscripti
         subscription={manageSub}
         open={manageSub !== null}
         onClose={() => setManageSub(null)}
+        onSaved={(updated) => setSubscriptions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))}
       />
     </div>
   )

@@ -1,10 +1,8 @@
-import { revalidatePath } from 'next/cache'
 import { getListeningTests, getIeltsSets, getFullIeltsSet } from '@/lib/data/ielts'
-import { createListeningTest, fetchListeningTestById, updateListeningTest, deleteListeningTest, fetchIeltsSetById, updateTestInSet } from '@/lib/api/ielts'
-import { IeltsContentShell, type SetFilterOption } from '@/components/ielts/IeltsContentShell'
+import { ListeningContentClient } from '@/components/ielts/ListeningContentClient'
 import type { ContentRow } from '@/components/ielts/ContentTable'
+import type { SetFilterOption } from '@/components/ielts/IeltsContentShell'
 import type { SetOption } from '@/components/ielts/ContentFormModal'
-import type { IeltsStatus } from '@/lib/types/ielts'
 
 export const metadata = { title: 'Listening Tests' }
 
@@ -44,59 +42,5 @@ export default async function ListeningPage() {
     createdAt: t.createdAt,
   }))
 
-  async function onCreate(data: { title: string; type: string; setId?: string; testId?: string }) {
-    'use server'
-    const test = await createListeningTest({ title: data.title })
-
-    if (data.setId && data.testId) {
-      try {
-        const set = await fetchIeltsSetById(data.setId)
-        const mockTest = set.tests.find((t) => t.id === data.testId)
-        if (mockTest) {
-          const existing = mockTest.sections.find((s) => s.skill === 'listening')
-          const updatedSections = existing
-            ? mockTest.sections.map((s) => s.skill === 'listening' ? { ...s, testId: test.id } : s)
-            : [...mockTest.sections, { id: '', skill: 'listening' as const, orderIndex: mockTest.sections.length + 1, durationMinutes: 40, testId: test.id }]
-          await updateTestInSet(data.testId, data.setId, { ...mockTest, sections: updatedSections })
-        }
-      } catch { /* linking is best-effort */ }
-    }
-
-    revalidatePath('/ielts/listening')
-    return { id: test.id, createdAt: test.createdAt }
-  }
-
-  async function onUpdate(id: string, data: { title: string; type: string; status: IeltsStatus }) {
-    'use server'
-    const current = await fetchListeningTestById(id)
-    await updateListeningTest(id, { ...current, title: data.title, status: data.status })
-    revalidatePath('/ielts/listening')
-  }
-
-  async function onDelete(id: string) {
-    'use server'
-    await deleteListeningTest(id)
-    revalidatePath('/ielts/listening')
-  }
-
-  return (
-    <IeltsContentShell
-      title="Listening Tests"
-      description="Manage listening test content and audio."
-      rows={rows}
-      typeOptions={['standard']}
-      typeLabel="Type"
-      manageHrefPrefix="/ielts/listening"
-      setFilters={setFilters}
-      createSetOptions={createSetOptions}
-      statsColumns={[
-        { key: 'sections', header: 'Sections' },
-        { key: 'questions', header: 'Questions' },
-        { key: 'audio', header: 'Audio' },
-      ]}
-      onApiCreate={onCreate}
-      onApiUpdate={onUpdate}
-      onApiDelete={onDelete}
-    />
-  )
+  return <ListeningContentClient rows={rows} setFilters={setFilters} createSetOptions={createSetOptions} />
 }

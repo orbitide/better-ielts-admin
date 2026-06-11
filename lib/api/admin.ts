@@ -1,5 +1,3 @@
-'use server'
-
 import httpClient from '@/lib/api/http'
 import type { User } from '@/lib/types/user'
 import type {
