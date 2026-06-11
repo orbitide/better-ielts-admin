@@ -1,4 +1,5 @@
 import { getSpeakingSessions, getIeltsSets, getFullIeltsSet } from '@/lib/data/ielts'
+import { toSpeakingRows } from '@/lib/data/ielts-rows'
 import { SpeakingContentClient } from '@/components/ielts/SpeakingContentClient'
 import type { ContentRow } from '@/components/ielts/ContentTable'
 import type { SetFilterOption } from '@/components/ielts/IeltsContentShell'
@@ -34,13 +35,7 @@ export default async function SpeakingPage() {
     }))
     .filter((s) => s.tests.length > 0)
 
-  const rows: ContentRow[] = sessions.map((s) => ({
-    id: s.id,
-    title: s.title,
-    stats: { topic: s.topic, parts: s.partCount },
-    status: s.status,
-    createdAt: s.createdAt,
-  }))
+  const rows: ContentRow[] = toSpeakingRows(sessions)
 
   return <SpeakingContentClient rows={rows} setFilters={setFilters} createSetOptions={createSetOptions} />
 }

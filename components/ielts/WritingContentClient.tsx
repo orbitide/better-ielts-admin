@@ -5,6 +5,7 @@ import type { ContentRow } from '@/components/ielts/ContentTable'
 import type { SetOption } from '@/components/ielts/ContentFormModal'
 import type { IeltsStatus } from '@/lib/types/ielts'
 import {
+  fetchWritingTasks,
   createWritingTask,
   fetchWritingTaskById,
   updateWritingTask,
@@ -12,6 +13,7 @@ import {
   fetchIeltsSetById,
   updateTestInSet,
 } from '@/lib/api/ielts'
+import { toWritingRows } from '@/lib/data/ielts-rows'
 
 type Props = {
   rows: ContentRow[]
@@ -49,6 +51,11 @@ export function WritingContentClient({ rows, setFilters, createSetOptions }: Pro
     await deleteWritingTask(id)
   }
 
+  async function onFilterChange({ setId, testId }: { setId?: string; testId?: string }) {
+    const { items } = await fetchWritingTasks(1, 100, undefined, setId, testId)
+    return toWritingRows(items)
+  }
+
   return (
     <IeltsContentShell
       title="Writing Tasks"
@@ -66,6 +73,7 @@ export function WritingContentClient({ rows, setFilters, createSetOptions }: Pro
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
+      onFilterChange={onFilterChange}
     />
   )
 }

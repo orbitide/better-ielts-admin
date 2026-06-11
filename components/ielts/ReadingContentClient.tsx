@@ -1,25 +1,64 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { IeltsContentShell, type SetFilterOption } from '@/components/ielts/IeltsContentShell'
 import type { ContentRow } from '@/components/ielts/ContentTable'
 import type { SetOption } from '@/components/ielts/ContentFormModal'
 import type { IeltsStatus } from '@/lib/types/ielts'
 import {
+  fetchReadingTests,
   createReadingTest,
   fetchReadingTestById,
   updateReadingTest,
   deleteReadingTest,
+  fetchIeltsSets,
   fetchIeltsSetById,
   updateTestInSet,
 } from '@/lib/api/ielts'
+import { toReadingRows } from '@/lib/data/ielts-rows'
 
-type Props = {
-  rows: ContentRow[]
-  setFilters: SetFilterOption[]
-  createSetOptions: SetOption[]
-}
+export function ReadingContentClient() {
+  const [rows, setRows] = useState<ContentRow[]>([])
+  const [setFilters, setSetFilters] = useState<SetFilterOption[]>([])
+  const [createSetOptions, setCreateSetOptions] = useState<SetOption[]>([])
 
-export function ReadingContentClient({ rows, setFilters, createSetOptions }: Props) {
+  useEffect(() => {
+    async function loadData() {
+      const [testsPage, setsPage] = await Promise.all([
+        fetchReadingTests(1, 100),
+        fetchIeltsSets(1, 100),
+      ])
+      setRows(toReadingRows(testsPage.items))
+
+      const fullSets = (await Promise.all(
+        setsPage.items.map((s) => fetchIeltsSetById(s.id).catch(() => null))
+      )).filter((s): s is NonNullable<typeof s> => s !== null)
+
+      setSetFilters(fullSets.map((set) => ({
+        setId: set.id,
+        setTitle: set.title,
+        tests: set.tests
+          .map((test) => {
+            const section = test.sections.find((sec) => sec.skill === 'reading')
+            if (!section) return null
+            return { testId: test.id, testTitle: test.title, skillContentId: section.testId }
+          })
+          .filter(Boolean) as SetFilterOption['tests'],
+      })))
+
+      setCreateSetOptions(
+        fullSets
+          .map((set) => ({
+            id: set.id,
+            title: set.title,
+            tests: set.tests.map((t) => ({ id: t.id, title: t.title })),
+          }))
+          .filter((s) => s.tests.length > 0)
+      )
+    }
+    loadData()
+  }, [])
+
   async function onCreate(data: { title: string; type: string; setId?: string; testId?: string }) {
     const test = await createReadingTest({ title: data.title, type: data.type })
 
@@ -49,6 +88,11 @@ export function ReadingContentClient({ rows, setFilters, createSetOptions }: Pro
     await deleteReadingTest(id)
   }
 
+  async function onFilterChange({ setId, testId }: { setId?: string; testId?: string }) {
+    const { items } = await fetchReadingTests(1, 100, undefined, setId, testId)
+    return toReadingRows(items)
+  }
+
   return (
     <IeltsContentShell
       title="Reading Tests"
@@ -66,6 +110,7 @@ export function ReadingContentClient({ rows, setFilters, createSetOptions }: Pro
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
+      onFilterChange={onFilterChange}
     />
   )
 }

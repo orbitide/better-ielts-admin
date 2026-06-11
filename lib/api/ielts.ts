@@ -67,9 +67,11 @@ function mapReadingTestToUpdateRequest(test: FullReadingTest) {
 
 export type ReadingTestsPage = { items: ReadingTest[]; totalCount: number; totalPages: number; page: number; pageSize: number }
 
-export async function fetchReadingTests(page = 1, pageSize = 20, status?: string): Promise<ReadingTestsPage> {
+export async function fetchReadingTests(page = 1, pageSize = 20, status?: string, setId?: string, testId?: string): Promise<ReadingTestsPage> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
   if (status) params.set('status', status)
+  if (setId) params.set('setId', setId)
+  if (testId) params.set('testId', testId)
   const { data } = await httpClient.get<ApiResponse<PagedResult<ApiReadingTestSummary>>>(`/api/admin/ielts/reading?${params}`)
   const r = data.data
   return { items: r.items.map(mapReadingTestSummary), totalCount: r.totalCount, totalPages: r.totalPages, page: r.page, pageSize: r.pageSize }
@@ -123,9 +125,11 @@ function mapListeningTestToUpdateRequest(test: FullListeningTest) {
 
 export type ListeningTestsPage = { items: ListeningTest[]; totalCount: number; totalPages: number; page: number; pageSize: number }
 
-export async function fetchListeningTests(page = 1, pageSize = 20, status?: string): Promise<ListeningTestsPage> {
+export async function fetchListeningTests(page = 1, pageSize = 20, status?: string, setId?: string, testId?: string): Promise<ListeningTestsPage> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
   if (status) params.set('status', status)
+  if (setId) params.set('setId', setId)
+  if (testId) params.set('testId', testId)
   const { data } = await httpClient.get<ApiResponse<PagedResult<ApiListeningTestSummary>>>(`/api/admin/ielts/listening?${params}`)
   const r = data.data
   return { items: r.items.map(mapListeningTestSummary), totalCount: r.totalCount, totalPages: r.totalPages, page: r.page, pageSize: r.pageSize }
@@ -165,9 +169,11 @@ function mapFullWritingTask(r: ApiWritingTaskDetail): FullWritingTask {
 
 export type WritingTasksPage = { items: WritingTask[]; totalCount: number; totalPages: number; page: number; pageSize: number }
 
-export async function fetchWritingTasks(page = 1, pageSize = 20, status?: string): Promise<WritingTasksPage> {
+export async function fetchWritingTasks(page = 1, pageSize = 20, status?: string, setId?: string, testId?: string): Promise<WritingTasksPage> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
   if (status) params.set('status', status)
+  if (setId) params.set('setId', setId)
+  if (testId) params.set('testId', testId)
   const { data } = await httpClient.get<ApiResponse<PagedResult<ApiWritingTaskSummary>>>(`/api/admin/ielts/writing?${params}`)
   const r = data.data
   return { items: r.items.map(mapWritingTaskSummary), totalCount: r.totalCount, totalPages: r.totalPages, page: r.page, pageSize: r.pageSize }
@@ -208,9 +214,11 @@ function mapFullSpeakingSession(r: ApiFullSpeakingSession): FullSpeakingSession 
 
 export type SpeakingSessionsPage = { items: SpeakingSession[]; totalCount: number; totalPages: number; page: number; pageSize: number }
 
-export async function fetchSpeakingSessions(page = 1, pageSize = 20, status?: string): Promise<SpeakingSessionsPage> {
+export async function fetchSpeakingSessions(page = 1, pageSize = 20, status?: string, setId?: string, testId?: string): Promise<SpeakingSessionsPage> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
   if (status) params.set('status', status)
+  if (setId) params.set('setId', setId)
+  if (testId) params.set('testId', testId)
   const { data } = await httpClient.get<ApiResponse<PagedResult<ApiSpeakingSessionSummary>>>(`/api/admin/ielts/speaking?${params}`)
   const r = data.data
   return { items: r.items.map(mapSpeakingSessionSummary), totalCount: r.totalCount, totalPages: r.totalPages, page: r.page, pageSize: r.pageSize }

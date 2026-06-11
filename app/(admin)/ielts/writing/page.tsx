@@ -1,4 +1,5 @@
 import { getWritingTasks, getIeltsSets, getFullIeltsSet } from '@/lib/data/ielts'
+import { toWritingRows } from '@/lib/data/ielts-rows'
 import { WritingContentClient } from '@/components/ielts/WritingContentClient'
 import type { ContentRow } from '@/components/ielts/ContentTable'
 import type { SetFilterOption } from '@/components/ielts/IeltsContentShell'
@@ -34,14 +35,7 @@ export default async function WritingPage() {
     }))
     .filter((s) => s.tests.length > 0)
 
-  const rows: ContentRow[] = tasks.map((t) => ({
-    id: t.id,
-    title: t.title,
-    type: t.type,
-    stats: { minWords: `${t.wordMinimum}+`, time: `${t.timeMinutes} min` },
-    status: t.status,
-    createdAt: t.createdAt,
-  }))
+  const rows: ContentRow[] = toWritingRows(tasks)
 
   return <WritingContentClient rows={rows} setFilters={setFilters} createSetOptions={createSetOptions} />
 }

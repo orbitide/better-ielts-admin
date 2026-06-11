@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { ContentTable, type ContentRow } from './ContentTable'
 import { ContentFormModal, type SetOption } from './ContentFormModal'
@@ -32,6 +32,7 @@ type IeltsContentShellProps = {
   onApiCreate?: (data: { title: string; type: string; setId?: string; testId?: string }) => Promise<{ id: string; createdAt: string }>
   onApiUpdate?: (id: string, data: { title: string; type: string; status: IeltsStatus }) => Promise<void>
   onApiDelete?: (id: string) => Promise<void>
+  onFilterChange?: (filter: { setId?: string; testId?: string }) => Promise<ContentRow[]>
 }
 
 export function IeltsContentShell({
@@ -47,12 +48,15 @@ export function IeltsContentShell({
   onApiCreate,
   onApiUpdate,
   onApiDelete,
+  onFilterChange,
 }: IeltsContentShellProps) {
   const [rows, setRows] = useState(initialRows)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<ContentRow | null>(null)
   const [selectedSetId, setSelectedSetId] = useState('')
   const [selectedTestId, setSelectedTestId] = useState('')
+  const [filterLoading, setFilterLoading] = useState(false)
+  const isFirstRender = useRef(true)
 
   const handleNew = () => { setEditing(null); setModalOpen(true) }
   const handleEdit = (row: ContentRow) => { setEditing(row); setModalOpen(true) }
@@ -88,15 +92,22 @@ export function IeltsContentShell({
 
   const selectedSet = setFilters?.find((s) => s.setId === selectedSetId)
 
-  const filteredRows = useMemo(() => {
-    if (!selectedSetId || !selectedSet) return rows
-    if (selectedTestId) {
-      const testFilter = selectedSet.tests.find((t) => t.testId === selectedTestId)
-      return testFilter ? rows.filter((r) => r.id === testFilter.skillContentId) : rows
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
     }
-    const ids = new Set(selectedSet.tests.map((t) => t.skillContentId))
-    return rows.filter((r) => ids.has(r.id))
-  }, [rows, selectedSetId, selectedTestId, selectedSet])
+    if (!onFilterChange) return
+
+    let cancelled = false
+    setFilterLoading(true)
+    onFilterChange({ setId: selectedSetId || undefined, testId: selectedTestId || undefined })
+      .then((newRows) => { if (!cancelled) setRows(newRows) })
+      .catch(() => { if (!cancelled) toast.error('Failed to apply filter.') })
+      .finally(() => { if (!cancelled) setFilterLoading(false) })
+
+    return () => { cancelled = true }
+  }, [selectedSetId, selectedTestId, onFilterChange])
 
   const handleSetChange = (value: string) => {
     setSelectedSetId(value)
@@ -130,6 +141,8 @@ export function IeltsContentShell({
           Clear
         </button>
       )}
+
+      {filterLoading && <span className="text-xs text-muted-foreground">Loading…</span>}
     </div>
   ) : undefined
 
@@ -139,7 +152,7 @@ export function IeltsContentShell({
         key={`${selectedSetId}-${selectedTestId}`}
         title={title}
         description={description}
-        initialRows={filteredRows}
+        initialRows={rows}
         onNew={handleNew}
         onEdit={handleEdit}
         onApiDelete={onApiDelete}

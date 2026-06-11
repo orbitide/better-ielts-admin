@@ -1,4 +1,5 @@
 import { getListeningTests, getIeltsSets, getFullIeltsSet } from '@/lib/data/ielts'
+import { toListeningRows } from '@/lib/data/ielts-rows'
 import { ListeningContentClient } from '@/components/ielts/ListeningContentClient'
 import type { ContentRow } from '@/components/ielts/ContentTable'
 import type { SetFilterOption } from '@/components/ielts/IeltsContentShell'
@@ -34,13 +35,7 @@ export default async function ListeningPage() {
     }))
     .filter((s) => s.tests.length > 0)
 
-  const rows: ContentRow[] = tests.map((t) => ({
-    id: t.id,
-    title: t.title,
-    stats: { sections: t.sectionCount, questions: t.questionCount, audio: t.audioUrl ? 'Uploaded' : 'Missing' },
-    status: t.status,
-    createdAt: t.createdAt,
-  }))
+  const rows: ContentRow[] = toListeningRows(tests)
 
   return <ListeningContentClient rows={rows} setFilters={setFilters} createSetOptions={createSetOptions} />
 }

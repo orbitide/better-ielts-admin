@@ -5,6 +5,7 @@ import type { ContentRow } from '@/components/ielts/ContentTable'
 import type { SetOption } from '@/components/ielts/ContentFormModal'
 import type { IeltsStatus } from '@/lib/types/ielts'
 import {
+  fetchSpeakingSessions,
   createSpeakingSession,
   fetchSpeakingSessionById,
   updateSpeakingSession,
@@ -12,6 +13,7 @@ import {
   fetchIeltsSetById,
   updateTestInSet,
 } from '@/lib/api/ielts'
+import { toSpeakingRows } from '@/lib/data/ielts-rows'
 
 type Props = {
   rows: ContentRow[]
@@ -49,6 +51,11 @@ export function SpeakingContentClient({ rows, setFilters, createSetOptions }: Pr
     await deleteSpeakingSession(id)
   }
 
+  async function onFilterChange({ setId, testId }: { setId?: string; testId?: string }) {
+    const { items } = await fetchSpeakingSessions(1, 100, undefined, setId, testId)
+    return toSpeakingRows(items)
+  }
+
   return (
     <IeltsContentShell
       title="Speaking Sessions"
@@ -66,6 +73,7 @@ export function SpeakingContentClient({ rows, setFilters, createSetOptions }: Pr
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
+      onFilterChange={onFilterChange}
     />
   )
 }
