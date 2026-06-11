@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
 import { ContentTable, type ContentRow } from './ContentTable'
 import { ContentFormModal, type SetOption } from './ContentFormModal'
-import { Select } from '@/components/ui/Select'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import type { IeltsStatus } from '@/lib/types/ielts'
 
 export type SetFilterTest = {
@@ -106,27 +106,21 @@ export function IeltsContentShell({
   const filterSlot = setFilters ? (
     <div className="flex items-center gap-2">
       <span className="text-xs font-medium text-muted-foreground">Set:</span>
-      <Select
+      <SearchableSelect
         value={selectedSetId}
-        onChange={(e) => handleSetChange(e.target.value)}
-      >
-        <option value="">All Sets</option>
-        {setFilters.map((s) => (
-          <option key={s.setId} value={s.setId}>{s.setTitle}</option>
-        ))}
-      </Select>
+        onChange={handleSetChange}
+        options={setFilters.map((s) => ({ value: s.setId, label: s.setTitle }))}
+        placeholder="All Sets"
+      />
 
       <span className="text-xs font-medium text-muted-foreground">Test:</span>
-      <Select
+      <SearchableSelect
         value={selectedTestId}
-        onChange={(e) => setSelectedTestId(e.target.value)}
+        onChange={setSelectedTestId}
+        options={(selectedSet?.tests ?? []).map((t) => ({ value: t.testId, label: t.testTitle }))}
+        placeholder="All Tests"
         disabled={!selectedSet}
-      >
-        <option value="">All Tests</option>
-        {selectedSet?.tests.map((t) => (
-          <option key={t.testId} value={t.testId}>{t.testTitle}</option>
-        ))}
-      </Select>
+      />
 
       {selectedSetId && (
         <button

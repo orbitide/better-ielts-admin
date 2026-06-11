@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import type { ContentRow } from './ContentTable'
 import type { IeltsStatus } from '@/lib/types/ielts'
 import { ContentSchema } from '@/lib/validations/ielts'
@@ -116,22 +117,24 @@ export function ContentFormModal({
             <p className="text-xs text-muted-foreground pt-1">Assign to a mock test (optional)</p>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Set</label>
-              <Select value={selectedSetId} onChange={(e) => handleSetChange(e.target.value)} className="w-full">
-                <option value="">— Select set —</option>
-                {setOptions.map((s) => (
-                  <option key={s.id} value={s.id}>{s.title}</option>
-                ))}
-              </Select>
+              <SearchableSelect
+                value={selectedSetId}
+                onChange={handleSetChange}
+                options={setOptions.map((s) => ({ value: s.id, label: s.title }))}
+                placeholder="— Select set —"
+                className="w-full"
+              />
             </div>
             {selectedSet && (
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Test</label>
-                <Select value={selectedTestId} onChange={(e) => setSelectedTestId(e.target.value)} className="w-full">
-                  <option value="">— Select test —</option>
-                  {selectedSet.tests.map((t) => (
-                    <option key={t.id} value={t.id}>{t.title}</option>
-                  ))}
-                </Select>
+                <SearchableSelect
+                  value={selectedTestId}
+                  onChange={setSelectedTestId}
+                  options={selectedSet.tests.map((t) => ({ value: t.id, label: t.title }))}
+                  placeholder="— Select test —"
+                  className="w-full"
+                />
               </div>
             )}
           </div>
