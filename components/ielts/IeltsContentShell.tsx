@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { ContentTable, type ContentRow } from './ContentTable'
+import { ContentTable, type ContentRow, type ServerPagination } from './ContentTable'
 import { ContentFormModal, type SetOption } from './ContentFormModal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import type { IeltsStatus } from '@/lib/types/ielts'
@@ -29,6 +29,7 @@ type IeltsContentShellProps = {
   setFilters?: SetFilterOption[]
   createSetOptions?: SetOption[]
   statsColumns?: { key: string; header: string }[]
+  pagination?: ServerPagination
   onApiCreate?: (data: { title: string; type: string; setId?: string; testId?: string }) => Promise<{ id: string; createdAt: string }>
   onApiUpdate?: (id: string, data: { title: string; type: string; status: IeltsStatus }) => Promise<void>
   onApiDelete?: (id: string) => Promise<void>
@@ -45,12 +46,16 @@ export function IeltsContentShell({
   setFilters,
   createSetOptions,
   statsColumns,
+  pagination,
   onApiCreate,
   onApiUpdate,
   onApiDelete,
   onFilterChange,
 }: IeltsContentShellProps) {
   const [rows, setRows] = useState(initialRows)
+  useEffect(() => {
+    setRows(initialRows)
+  }, [initialRows])
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<ContentRow | null>(null)
   const [selectedSetId, setSelectedSetId] = useState('')
@@ -159,6 +164,7 @@ export function IeltsContentShell({
         manageHrefPrefix={manageHrefPrefix}
         filterSlot={filterSlot}
         statsColumns={statsColumns}
+        pagination={pagination}
       />
       <ContentFormModal
         open={modalOpen}

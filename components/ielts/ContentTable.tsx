@@ -12,7 +12,7 @@ import { Modal } from '@/components/ui/Modal'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { DataTable, DataTableToolbar, type ColumnDef } from '@/components/ui/DataTable'
+import { DataTable, DataTableToolbar, DataTablePagination, type ColumnDef } from '@/components/ui/DataTable'
 import type { IeltsStatus } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
 
@@ -30,6 +30,16 @@ export type ContentRow = {
   createdAt: string
 }
 
+export type ServerPagination = {
+  page: number
+  pageSize: number
+  totalPages: number
+  totalCount: number
+  loading?: boolean
+  onPageChange: (page: number) => void
+  onPageSizeChange: (pageSize: number) => void
+}
+
 type ContentTableProps = {
   title: string
   description: string
@@ -40,6 +50,7 @@ type ContentTableProps = {
   manageHrefPrefix?: string
   filterSlot?: ReactNode
   statsColumns?: { key: string; header: string }[]
+  pagination?: ServerPagination
 }
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
@@ -48,7 +59,9 @@ const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = 
   archived: 'secondary',
 }
 
-export function ContentTable({ title, description, initialRows, onNew, onEdit, onApiDelete, manageHrefPrefix, filterSlot, statsColumns }: ContentTableProps) {
+const DEFAULT_PAGE_SIZE = 10
+
+export function ContentTable({ title, description, initialRows, onNew, onEdit, onApiDelete, manageHrefPrefix, filterSlot, statsColumns, pagination }: ContentTableProps) {
   const [rows, setRows] = useState(initialRows)
   useEffect(() => {
     setRows(initialRows)
@@ -56,16 +69,32 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<IeltsStatus | ''>('')
+  const [page, setPage] = useState(1)
+  const [clientPageSize, setClientPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [, startTransition] = useTransition()
   const [deleteTarget, setDeleteTarget] = useState<ContentRow | null>(null)
   const [deleting, setDeleting] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    setPage(1)
+  }, [query, typeFilter, statusFilter])
 
   const filtered = rows.filter((r) =>
     r.title.toLowerCase().includes(query.toLowerCase()) &&
     (!typeFilter || r.type === typeFilter) &&
     (!statusFilter || r.status === statusFilter)
   )
+
+  const currentPageSize = pagination ? pagination.pageSize : clientPageSize
+  const totalPages = pagination ? pagination.totalPages : Math.max(1, Math.ceil(filtered.length / currentPageSize))
+  const paginated = pagination ? filtered : filtered.slice((page - 1) * currentPageSize, page * currentPageSize)
+  const currentPage = pagination ? pagination.page : page
+  const sourceCount = pagination ? pagination.totalCount : rows.length
+  const handlePageChange = pagination ? pagination.onPageChange : setPage
+  const handlePageSizeChange = pagination
+    ? pagination.onPageSizeChange
+    : (size: number) => { setClientPageSize(size); setPage(1) }
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -269,11 +298,21 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
 
       <DataTable
         columns={columns}
-        data={filtered}
+        data={paginated}
+        loading={pagination?.loading}
         emptyMessage="No items found."
       />
 
-      <p className="text-xs text-muted-foreground">{filtered.length} of {rows.length} items</p>
+      <DataTablePagination
+        page={currentPage}
+        totalPages={totalPages}
+        totalCount={filtered.length}
+        sourceCount={sourceCount}
+        onPageChange={handlePageChange}
+        loading={pagination?.loading}
+        pageSize={currentPageSize}
+        onPageSizeChange={handlePageSizeChange}
+      />
 
       <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title="Delete Item">
         <p className="text-sm text-muted-foreground mb-6">
