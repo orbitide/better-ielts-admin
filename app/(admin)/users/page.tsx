@@ -1,5 +1,6 @@
 import { getUsers } from '@/lib/data/users'
 import { UsersTable } from '@/components/users/UsersTable'
+import { ActiveUsersBadge } from '@/components/users/ActiveUsersBadge'
 import { PageHeader } from '@/components/ui/PageHeader'
 
 export const metadata = { title: 'Users' }
@@ -12,7 +13,9 @@ export default async function UsersPage() {
       <PageHeader
         title="Users"
         description={`${totalCount} registered users on the platform.`}
-      />
+      >
+        <ActiveUsersBadge />
+      </PageHeader>
       <UsersTable users={items} />
     </div>
   )
