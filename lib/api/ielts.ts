@@ -1,4 +1,4 @@
-import httpClient from '@/lib/api/http'
+import { httpClient } from '@/lib/api/http'
 import type {
   ReadingTest, ReadingTestDetail, ReadingSection, ReadingQuestion,
   McqQuestion, TfngQuestion, MatchingQuestion, FillBlankQuestion,

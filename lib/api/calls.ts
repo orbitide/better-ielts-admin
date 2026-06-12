@@ -1,4 +1,4 @@
-import httpClient from '@/lib/api/http'
+import { httpClient } from '@/lib/api/http'
 import type { CallTopic } from '@/lib/types/calls'
 import type { IeltsStatus } from '@/lib/types/ielts'
 

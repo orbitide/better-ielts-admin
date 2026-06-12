@@ -1,4 +1,4 @@
-import httpClient from '@/lib/api/http'
+import { httpClient } from '@/lib/api/http'
 import type { BlogPost, BlogCategory } from '@/lib/types/content'
 
 type ApiPost = {

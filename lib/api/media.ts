@@ -1,4 +1,4 @@
-import httpClient from '@/lib/api/http'
+import { httpClient } from '@/lib/api/http'
 import type { MediaAsset, MediaFolder, MediaListResult } from '@/lib/types/media'
 
 export async function uploadMedia(file: File, folder: MediaFolder): Promise<MediaAsset> {

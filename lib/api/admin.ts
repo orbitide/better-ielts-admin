@@ -1,4 +1,4 @@
-import httpClient from '@/lib/api/http'
+
 import type { User } from '@/lib/types/user'
 import type {
   DashboardStats,
@@ -9,6 +9,7 @@ import type {
   AuditLogEntry,
   AdminRoleOption,
 } from '@/lib/types/admin'
+import { httpClient } from "@/lib/api/http";
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 
