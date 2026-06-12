@@ -13,14 +13,12 @@ import type { BlogCategory } from '@/lib/types/content'
 import { BlogCategorySchema } from '@/lib/validations/blog'
 import { fieldErrors } from '@/lib/validations/utils'
 
-type Props = { initialCategories: BlogCategory[] }
-
 function toSlug(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, '-')
 }
 
-export function BlogCategoryShell({ initialCategories }: Props) {
-  const [categories, setCategories] = useState(initialCategories)
+export function BlogCategoryShell() {
+  const [categories, setCategories] = useState<BlogCategory[]>([])
 
   useEffect(() => {
     fetchBlogCategories().then(setCategories).catch(() => {})

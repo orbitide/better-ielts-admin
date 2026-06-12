@@ -6,12 +6,12 @@ import { fetchBlogPosts, deleteBlogPost } from '@/lib/api/blog'
 import type { BlogPostsPage } from '@/lib/api/blog'
 import { Button } from '@/components/ui/Button'
 
-export function BlogShell({ initialData }: { initialData: BlogPostsPage }) {
-  const [posts, setPosts] = useState(initialData.posts)
-  const [page, setPage] = useState(initialData.page)
-  const [totalPages, setTotalPages] = useState(initialData.totalPages)
-  const [totalCount, setTotalCount] = useState(initialData.totalCount)
-  const [loading, setLoading] = useState(false)
+export function BlogShell() {
+  const [posts, setPosts] = useState<BlogPostsPage['posts']>([])
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   const loadPage = async (p: number) => {
     setLoading(true)

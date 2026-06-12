@@ -20,10 +20,10 @@ import { fieldErrors } from '@/lib/validations/utils'
 type BlogPostFormProps = {
   initialData?: Partial<BlogPost>
   formTitle: string
-  categories: BlogCategory[]
+  categories?: BlogCategory[]
 }
 
-export function BlogPostForm({ initialData, formTitle, categories: initialCategories }: BlogPostFormProps) {
+export function BlogPostForm({ initialData, formTitle, categories: initialCategories = [] }: BlogPostFormProps) {
   const router = useRouter()
   const [categories, setCategories] = useState<BlogCategory[]>(initialCategories)
 
