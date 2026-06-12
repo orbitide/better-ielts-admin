@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import axios from 'axios'
-import httpClient from '@/lib/api/http'
+import { httpClient } from '@/lib/api/http'
 
 const roleLabels: Record<string, string> = {
   SuperAdmin: 'Super Admin',

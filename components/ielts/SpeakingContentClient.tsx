@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { IeltsContentShell, type SetFilterOption } from '@/components/ielts/IeltsContentShell'
 import type { ContentRow } from '@/components/ielts/ContentTable'
 import type { SetOption } from '@/components/ielts/ContentFormModal'
@@ -10,18 +12,83 @@ import {
   fetchSpeakingSessionById,
   updateSpeakingSession,
   deleteSpeakingSession,
+  fetchIeltsSets,
+  fetchFullIeltsSet,
   linkContentToTest,
   unlinkContentFromTest,
 } from '@/lib/api/ielts'
 import { toSpeakingRows } from '@/lib/data/ielts-rows'
 
-type Props = {
-  rows: ContentRow[]
-  setFilters: SetFilterOption[]
-  createSetOptions: SetOption[]
-}
+const DEFAULT_PAGE_SIZE = 10
 
-export function SpeakingContentClient({ rows, setFilters, createSetOptions }: Props) {
+export function SpeakingContentClient() {
+  const [rows, setRows] = useState<ContentRow[]>([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  const [setFilters, setSetFilters] = useState<SetFilterOption[]>([])
+  const [createSetOptions, setCreateSetOptions] = useState<SetOption[]>([])
+  const [selectedSetId, setSelectedSetId] = useState('')
+  const [selectedTestId, setSelectedTestId] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    fetchSpeakingSessions(page, pageSize, undefined, selectedSetId || undefined, selectedTestId || undefined)
+      .then((r) => {
+        if (cancelled) return
+        setRows(toSpeakingRows(r.items))
+        setTotalPages(r.totalPages)
+        setTotalCount(r.totalCount)
+      })
+      .catch((err) => {
+        if (!cancelled) toast.error((err as Error).message ?? 'Failed to load speaking sessions.')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [page, pageSize, selectedSetId, selectedTestId])
+
+  useEffect(() => {
+    fetchIeltsSets(1, 100)
+      .then(async (setsResult) => {
+        const fullSets = await Promise.all(
+          setsResult.items.map((s) => fetchFullIeltsSet(s.id).catch(() => undefined))
+        )
+
+        const filters: SetFilterOption[] = fullSets
+          .filter(Boolean)
+          .map((set) => ({
+            setId: set!.id,
+            setTitle: set!.title,
+            tests: set!.tests
+              .map((test) => {
+                const section = test.sections.find((s) => s.skill === 'speaking')
+                if (!section) return null
+                return { testId: test.id, testTitle: test.title, skillContentId: section.contentId }
+              })
+              .filter(Boolean) as SetFilterOption['tests'],
+          }))
+
+        const options: SetOption[] = fullSets
+          .filter(Boolean)
+          .map((set) => ({
+            id: set!.id,
+            title: set!.title,
+            tests: set!.tests.map((t) => ({ id: t.id, title: t.title })),
+          }))
+          .filter((s) => s.tests.length > 0)
+
+        setSetFilters(filters)
+        setCreateSetOptions(options)
+      })
+      .catch(() => {})
+  }, [])
+
   async function onCreate(data: { title: string; type: string; setId?: string; testId?: string }) {
     const session = await createSpeakingSession({ title: data.title })
 
@@ -50,9 +117,18 @@ export function SpeakingContentClient({ rows, setFilters, createSetOptions }: Pr
     await deleteSpeakingSession(id)
   }
 
-  async function onFilterChange({ setId, testId }: { setId?: string; testId?: string }) {
-    const { items } = await fetchSpeakingSessions(1, 100, undefined, setId, testId)
-    return toSpeakingRows(items)
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(1)
+  }
+
+  const handleSetFilterChange = ({ setId, testId }: { setId?: string; testId?: string }) => {
+    const newSetId = setId ?? ''
+    const newTestId = testId ?? ''
+    if (newSetId === selectedSetId && newTestId === selectedTestId) return
+    setSelectedSetId(newSetId)
+    setSelectedTestId(newTestId)
+    setPage(1)
   }
 
   return (
@@ -69,6 +145,7 @@ export function SpeakingContentClient({ rows, setFilters, createSetOptions }: Pr
         { key: 'topic', header: 'Topic' },
         { key: 'parts', header: 'Parts' },
       ]}
+      pagination={{ page, pageSize, totalPages, totalCount, loading, onPageChange: setPage, onPageSizeChange: handlePageSizeChange }}
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
@@ -76,7 +153,9 @@ export function SpeakingContentClient({ rows, setFilters, createSetOptions }: Pr
         const d = await fetchSpeakingSessionById(id)
         return { setId: d.setId, testId: d.testId }
       }}
-      onFilterChange={onFilterChange}
+      onSetFilterChange={handleSetFilterChange}
+      selectedSetId={selectedSetId}
+      selectedTestId={selectedTestId}
     />
   )
 }
