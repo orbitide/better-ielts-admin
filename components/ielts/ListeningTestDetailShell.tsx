@@ -8,26 +8,22 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Modal } from '@/components/ui/Modal'
+import { DataTablePagination } from '@/components/ui/DataTable/DataTablePagination'
 import { ContentFormModal } from './ContentFormModal'
 import { ListeningSectionFormModal } from './ListeningSectionFormModal'
 import { Breadcrumb } from './Breadcrumb'
-import type { FullListeningTest, ListeningSection, IeltsStatus, SetContext } from '@/lib/types/ielts'
+import type { ListeningTestDetail, ListeningSection, IeltsStatus, SetContext } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
-import { updateListeningTest } from '@/lib/api/ielts'
+import {
+  updateListeningTest,
+  fetchListeningSections, createListeningSection, updateListeningSection, deleteListeningSection,
+  type ListeningSectionsPage,
+} from '@/lib/api/ielts'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
   published: 'success',
   draft: 'warning',
   archived: 'secondary',
-}
-
-type ListeningTestDetailShellProps = {
-  test: FullListeningTest
-  setContext?: SetContext
-}
-
-function genId() {
-  return `ls-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
 
 function formatDuration(seconds: number) {
@@ -36,8 +32,16 @@ function formatDuration(seconds: number) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export function ListeningTestDetailShell({ test: initial, setContext }: ListeningTestDetailShellProps) {
+type ListeningTestDetailShellProps = {
+  test: ListeningTestDetail
+  initialSectionsPage: ListeningSectionsPage
+  setContext?: SetContext
+}
+
+export function ListeningTestDetailShell({ test: initial, initialSectionsPage, setContext }: ListeningTestDetailShellProps) {
   const [test, setTest] = useState(initial)
+  const [sectionsPage, setSectionsPage] = useState(initialSectionsPage)
+  const [loading, setLoading] = useState(false)
   const [metaModalOpen, setMetaModalOpen] = useState(false)
   const [sectionModalOpen, setSectionModalOpen] = useState(false)
   const [editingSection, setEditingSection] = useState<ListeningSection | null>(null)
@@ -48,7 +52,7 @@ export function ListeningTestDetailShell({ test: initial, setContext }: Listenin
     const updated = { ...test, title, status }
     setTest(updated)
     try {
-      const saved = await updateListeningTest(test.id, updated)
+      const saved = await updateListeningTest(test.id, { title: updated.title, durationMinutes: updated.durationMinutes, status: updated.status, setId: updated.setId, testId: updated.testId })
       setTest(saved)
     } catch (err) {
       setTest(prev)
@@ -62,40 +66,54 @@ export function ListeningTestDetailShell({ test: initial, setContext }: Listenin
     audioDurationSeconds: number
     transcript: string
   }) => {
-    const prev = test
-    let updated: FullListeningTest
-    if (editingSection) {
-      updated = { ...test, sections: test.sections.map((s) => s.id === editingSection.id ? { ...s, sectionNumber, audioUrl, audioDurationSeconds, transcript } : s) }
-    } else {
-      const newSection: ListeningSection = { id: genId(), sectionNumber, audioUrl, audioDurationSeconds, transcript, questions: [] }
-      updated = { ...test, sections: [...test.sections, newSection] }
+    const payload = {
+      sectionNumber, audioUrl, audioDurationSeconds, transcript,
+      layoutJson: editingSection?.layout ? JSON.stringify(editingSection.layout) : undefined,
     }
-    setTest(updated)
+    setLoading(true)
     try {
-      const saved = await updateListeningTest(test.id, updated)
-      setTest(saved)
+      if (editingSection) {
+        await updateListeningSection(editingSection.id, payload)
+      } else {
+        await createListeningSection(test.id, payload)
+      }
+      const refreshed = await fetchListeningSections(test.id, sectionsPage.page, sectionsPage.pageSize)
+      setSectionsPage(refreshed)
     } catch (err) {
-      setTest(prev)
       toast.error((err as Error).message ?? 'Failed to save section.')
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleDeleteSection = async () => {
     if (!deleteTarget) return
-    const prev = test
-    const updated = { ...test, sections: test.sections.filter((s) => s.id !== deleteTarget.id) }
-    setTest(updated)
-    setDeleteTarget(null)
+    setLoading(true)
     try {
-      const saved = await updateListeningTest(test.id, updated)
-      setTest(saved)
+      await deleteListeningSection(deleteTarget.id)
+      const remaining = sectionsPage.totalCount - 1
+      const targetPage = Math.min(sectionsPage.page, Math.max(1, Math.ceil(remaining / sectionsPage.pageSize)))
+      const refreshed = await fetchListeningSections(test.id, targetPage, sectionsPage.pageSize)
+      setSectionsPage(refreshed)
+      setDeleteTarget(null)
     } catch (err) {
-      setTest(prev)
       toast.error((err as Error).message ?? 'Failed to delete section.')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const sortedSections = [...test.sections].sort((a, b) => a.sectionNumber - b.sectionNumber)
+  const handlePageChange = async (page: number) => {
+    setLoading(true)
+    try {
+      const refreshed = await fetchListeningSections(test.id, page, sectionsPage.pageSize)
+      setSectionsPage(refreshed)
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to load sections.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <>
@@ -105,13 +123,18 @@ export function ListeningTestDetailShell({ test: initial, setContext }: Listenin
           { label: setContext.setTitle, href: `/ielts/mock-tests/${setContext.setId}` },
           { label: `Test ${setContext.testIndex}`, href: `/ielts/mock-tests/${setContext.setId}/tests/${setContext.testId}` },
           { label: test.title },
+        ] : test.setId && test.setName && test.testId && test.testName ? [
+          { label: 'Sets', href: '/ielts/mock-tests' },
+          { label: test.setName, href: `/ielts/mock-tests/${test.setId}` },
+          { label: test.testName, href: `/ielts/mock-tests/${test.setId}/tests/${test.testId}` },
+          { label: test.title },
         ] : [
           { label: 'Listening Tests', href: '/ielts/listening' },
           { label: test.title },
         ]} />
 
         <div className="space-y-3">
-          <PageHeader title={test.title} description={`${test.durationMinutes} min · ${test.sections.length} sections`}>
+          <PageHeader title={test.title} description={`${test.durationMinutes} min`}>
             <RoleGate permission="ielts:edit">
               <Button size="sm" variant="ghost" onClick={() => setMetaModalOpen(true)}>
                 <Pencil className="h-3.5 w-3.5" />
@@ -125,60 +148,74 @@ export function ListeningTestDetailShell({ test: initial, setContext }: Listenin
           </PageHeader>
           <div className="flex items-center gap-2">
             <Badge variant={statusVariant[test.status]}>{test.status}</Badge>
-            <span className="text-xs text-muted-foreground">{test.durationMinutes} min</span>
+            <span className="text-xs text-muted-foreground">{sectionsPage.totalCount} section{sectionsPage.totalCount !== 1 ? 's' : ''}</span>
           </div>
         </div>
 
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Sections</h2>
-          {sortedSections.length === 0 ? (
+          {sectionsPage.items.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border py-10 text-center">
               <p className="text-sm text-muted-foreground">No sections yet.</p>
-              <button onClick={() => { setEditingSection(null); setSectionModalOpen(true) }} className="mt-2 text-sm text-primary hover:underline">
+              <button
+                onClick={() => { setEditingSection(null); setSectionModalOpen(true) }}
+                className="mt-2 text-sm text-primary hover:underline"
+              >
                 Add the first section
               </button>
             </div>
           ) : (
-            sortedSections.map((section) => (
-              <div key={section.id} className="rounded-xl border border-border bg-card p-4 flex items-start gap-4">
-                <div className="rounded-lg bg-muted flex items-center justify-center h-9 w-9 text-sm font-semibold shrink-0">
-                  {section.sectionNumber}
-                </div>
-                <div className="flex-1 min-w-0 space-y-0.5">
-                  <p className="font-medium text-sm">Section {section.sectionNumber}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {section.audioUrl || 'No audio URL'} · {formatDuration(section.audioDurationSeconds)} · {section.questions.length} questions
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Link
-                    href={`/ielts/listening/${test.id}/sections/${section.id}${setContext ? `?setId=${setContext.setId}&setTitle=${encodeURIComponent(setContext.setTitle)}&testId=${setContext.testId}&testIndex=${setContext.testIndex}` : ''}`}
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                    title="Manage section"
-                  >
-                    <Settings2 className="h-3.5 w-3.5" />
-                  </Link>
-                  <RoleGate permission="ielts:edit">
-                    <button
-                      onClick={() => { setEditingSection(section); setSectionModalOpen(true) }}
+            <>
+              {sectionsPage.items.map((section) => (
+                <div key={section.id} className="rounded-xl border border-border bg-card p-4 flex items-start gap-4">
+                  <div className="rounded-lg bg-muted flex items-center justify-center h-9 w-9 text-sm font-semibold shrink-0">
+                    {section.sectionNumber}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <p className="font-medium text-sm">Section {section.sectionNumber}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {section.audioUrl || 'No audio URL'} · {formatDuration(section.audioDurationSeconds)} · {section.questionCount} question{section.questionCount !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Link
+                      href={`/ielts/listening/${test.id}/sections/${section.id}${setContext ? `?setId=${setContext.setId}&setTitle=${encodeURIComponent(setContext.setTitle)}&testId=${setContext.testId}&testIndex=${setContext.testIndex}` : ''}`}
                       className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                      title="Edit section"
+                      title="Manage section"
                     >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                  </RoleGate>
-                  <RoleGate permission="ielts:delete">
-                    <button
-                      onClick={() => setDeleteTarget(section)}
-                      className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </RoleGate>
+                      <Settings2 className="h-3.5 w-3.5" />
+                    </Link>
+                    <RoleGate permission="ielts:edit">
+                      <button
+                        onClick={() => { setEditingSection(section); setSectionModalOpen(true) }}
+                        className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                        title="Edit section"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    </RoleGate>
+                    <RoleGate permission="ielts:delete">
+                      <button
+                        onClick={() => setDeleteTarget(section)}
+                        className="rounded-md p-1.5 text-muted-foreground hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </RoleGate>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+              <DataTablePagination
+                page={sectionsPage.page}
+                totalPages={sectionsPage.totalPages}
+                totalCount={sectionsPage.totalCount}
+                sourceCount={sectionsPage.totalCount}
+                onPageChange={handlePageChange}
+                loading={loading}
+                countLabel={`${sectionsPage.totalCount} section${sectionsPage.totalCount !== 1 ? 's' : ''}`}
+              />
+            </>
           )}
         </div>
       </div>
@@ -205,6 +242,7 @@ export function ListeningTestDetailShell({ test: initial, setContext }: Listenin
         open={sectionModalOpen}
         onClose={() => setSectionModalOpen(false)}
         editing={editingSection}
+        nextSectionNumber={([1, 2, 3, 4] as const).find((n) => !sectionsPage.items.some((s) => s.sectionNumber === n))}
         onSave={handleSectionSave}
       />
     </>

@@ -1,9 +1,9 @@
 import { cache } from 'react'
 import {
   fetchReadingTests, fetchReadingTestById, fetchReadingSections, fetchReadingSectionById, fetchReadingQuestions,
-  fetchListeningTests, fetchListeningTestById,
+  fetchListeningTests, fetchListeningTestById, fetchListeningSections, fetchListeningSectionById, fetchListeningQuestions,
   fetchWritingTasks, fetchWritingTaskById,
-  fetchSpeakingSessions, fetchSpeakingSessionById,
+  fetchSpeakingSessions, fetchSpeakingSessionById, fetchSpeakingParts,
   fetchVocabTopics, fetchVocabTopicById,
   fetchIeltsSets, fetchFullIeltsSet,
 } from '@/lib/api/ielts'
@@ -54,16 +54,32 @@ export const getReadingQuestions = cache(async (sectionId: string, page = 1, pag
   fetchReadingQuestions(sectionId, page, pageSize).catch(onlyNotFound)
 )
 
-export const getFullListeningTest = cache(async (id: string) =>
+export const getListeningTestDetail = cache(async (id: string) =>
   fetchListeningTestById(id).catch(onlyNotFound)
+)
+
+export const getListeningSections = cache(async (testId: string, page = 1, pageSize = 10) =>
+  fetchListeningSections(testId, page, pageSize).catch(onlyNotFound)
+)
+
+export const getListeningSectionDetail = cache(async (sectionId: string) =>
+  fetchListeningSectionById(sectionId).catch(onlyNotFound)
+)
+
+export const getListeningQuestions = cache(async (sectionId: string, page = 1, pageSize = 20) =>
+  fetchListeningQuestions(sectionId, page, pageSize).catch(onlyNotFound)
 )
 
 export const getFullWritingTask = cache(async (id: string) =>
   fetchWritingTaskById(id).catch(onlyNotFound)
 )
 
-export const getFullSpeakingSession = cache(async (id: string) =>
+export const getSpeakingSessionDetail = cache(async (id: string) =>
   fetchSpeakingSessionById(id).catch(onlyNotFound)
+)
+
+export const getSpeakingParts = cache(async (sessionId: string) =>
+  fetchSpeakingParts(sessionId).catch(onlyNotFound)
 )
 
 export const getFullVocabTopic = cache(async (id: string) =>

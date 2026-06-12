@@ -1,31 +1,12 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { decodeSession, ACCESS_COOKIE } from '@/lib/auth/session-edge'
-import { canAccessRoute } from '@/lib/auth/permissions'
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  const token = request.cookies.get(ACCESS_COOKIE)?.value;
-
-  console.log('access token', token);
-  if (!token) {
-    return NextResponse.redirect(
-      new URL(`/login?redirect=${encodeURIComponent(pathname)}`, request.url)
-    )
-  }
-
-  const session = decodeSession(token)
-  if (!session) {
-    const response = NextResponse.redirect(new URL('/login', request.url))
-    response.cookies.delete(ACCESS_COOKIE)
-    return response
-  }
-
-  if (!canAccessRoute(session.role, pathname)) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
+export function middleware(_request: NextRequest) {
+  // TODO: re-enable cookie-based auth check (incl. canAccessRoute permission
+  // check via decodeSession/ACCESS_COOKIE) once the API is proxied through
+  // this app's origin (currently auth_access is set on the API origin, e.g.
+  // localhost:5000, so this middleware can never see it). Until then, auth
+  // is enforced client-side via AuthGate + the Zustand auth store bootstrap.
   return NextResponse.next()
 }
 

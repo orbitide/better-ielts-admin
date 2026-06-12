@@ -90,18 +90,13 @@ export function ListeningContentClient() {
   }, [])
 
   async function onCreate(data: { title: string; type: string; setId?: string; testId?: string }) {
-    const test = await createListeningTest({ title: data.title })
-
-    if (data.setId && data.testId) {
-      try { await linkContentToTest(data.setId, data.testId, 'listening', test.id) } catch { /* best-effort */ }
-    }
-
+    const test = await createListeningTest({ title: data.title, setId: data.setId, testId: data.testId })
     return { id: test.id, createdAt: test.createdAt }
   }
 
   async function onUpdate(id: string, data: { title: string; type: string; status: IeltsStatus; setId?: string; testId?: string }) {
     const current = await fetchListeningTestById(id)
-    await updateListeningTest(id, { ...current, title: data.title, status: data.status })
+    await updateListeningTest(id, { title: data.title, durationMinutes: current.durationMinutes, status: data.status, setId: current.setId, testId: current.testId })
 
     if (current.setId !== data.setId || current.testId !== data.testId) {
       if (current.setId && current.testId) {

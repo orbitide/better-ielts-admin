@@ -30,7 +30,7 @@ export const useAdminAuthStore = create<AdminAuthState>()((set) => ({
     login: async (email, password) => {
         const result = await loginAction(email, password)
         if (result.ok) {
-            set({admin: result.admin, isAuthenticated: true})
+            set({admin: result.admin, isAuthenticated: true, _hasHydrated: true})
             return {ok: true}
         }
         return {ok: false, error: result.error}

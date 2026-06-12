@@ -181,18 +181,31 @@ export type ListeningQuestion = {
 
 export type ListeningSection = {
   id: string
+  listeningTestId: string
   sectionNumber: 1 | 2 | 3 | 4
   audioUrl: string
   audioDurationSeconds: number
   transcript: string
-  questions: ListeningQuestion[]
+  questionCount: number
   layout?: ListeningLayout
 }
 
-export type FullListeningTest = ListeningTest & {
+export type ListeningTestDetail = {
+  id: string
+  title: string
+  durationMinutes: number
+  status: IeltsStatus
+  createdAt: string
   setId?: string
+  setName?: string
   testId?: string
-  sections: ListeningSection[]
+  testName?: string
+}
+
+// Local assembly shape used only to feed the layout node modals/utilities,
+// which need every section's questions + layout to compute question numbering.
+export type FullListeningTest = ListeningTestDetail & {
+  sections: (ListeningSection & { questions: ListeningQuestion[] })[]
 }
 
 // ─── Listening structured layout types (Beta, additive) ──────────────────────
@@ -280,6 +293,7 @@ export type FullWritingTask = WritingTask & {
 // ─── Speaking nested types ────────────────────────────────────────────────────
 
 export type SpeakingPart = {
+  id?: string
   part: 1 | 2 | 3
   topic: string
   questions: string[]
@@ -291,7 +305,6 @@ export type SpeakingPart = {
 export type FullSpeakingSession = SpeakingSession & {
   setId?: string
   testId?: string
-  parts: SpeakingPart[]
 }
 
 // ─── Set (full MockTest) types ────────────────────────────────────────────────

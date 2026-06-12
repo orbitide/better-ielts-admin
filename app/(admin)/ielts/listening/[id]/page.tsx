@@ -2,29 +2,38 @@
 
 import { useParams, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { fetchListeningTestById } from '@/lib/api/ielts'
+import { fetchListeningTestById, fetchListeningSections } from '@/lib/api/ielts'
+import type { ListeningSectionsPage } from '@/lib/api/ielts'
 import { ListeningTestDetailShell } from '@/components/ielts/ListeningTestDetailShell'
-import type { FullListeningTest, SetContext } from '@/lib/types/ielts'
+import type { ListeningTestDetail, SetContext } from '@/lib/types/ielts'
+
+const SECTIONS_PAGE_SIZE = 10
 
 const ListeningTestDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const searchParams = useSearchParams()
-  const [test, setTest] = useState<FullListeningTest | null>(null)
+  const [test, setTest] = useState<ListeningTestDetail | null>(null)
+  const [sectionsPage, setSectionsPage] = useState<ListeningSectionsPage | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'not-found'>('loading')
 
+  const page = Number(searchParams.get('page') ?? '1') || 1
   const setId = searchParams.get('setId')
   const setTitle = searchParams.get('setTitle')
   const testId = searchParams.get('testId')
   const testIndex = searchParams.get('testIndex')
 
   useEffect(() => {
-    fetchListeningTestById(id)
-      .then((t) => {
+    Promise.all([
+      fetchListeningTestById(id),
+      fetchListeningSections(id, page, SECTIONS_PAGE_SIZE),
+    ])
+      .then(([t, sp]) => {
         setTest(t)
+        setSectionsPage(sp)
         setStatus('ready')
       })
       .catch(() => setStatus('not-found'))
-  }, [id])
+  }, [id, page])
 
   if (status === 'loading') {
     return (
@@ -57,7 +66,7 @@ const ListeningTestDetailPage = () => {
         }
       : undefined
 
-  return <ListeningTestDetailShell test={test!} setContext={setContext} />
+  return <ListeningTestDetailShell test={test!} initialSectionsPage={sectionsPage!} setContext={setContext} />
 }
 
 export default ListeningTestDetailPage

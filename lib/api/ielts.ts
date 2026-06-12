@@ -3,9 +3,9 @@ import type {
   ReadingTest, ReadingTestDetail, ReadingSection, ReadingQuestion,
   McqQuestion, TfngQuestion, MatchingQuestion, FillBlankQuestion,
   McqOption, MatchingOption,
-  ListeningTest, FullListeningTest, ListeningSection, ListeningQuestion,
+  ListeningTest, ListeningTestDetail, ListeningSection, ListeningQuestion,
   WritingTask, FullWritingTask,
-  SpeakingSession, FullSpeakingSession,
+  SpeakingSession, FullSpeakingSession, SpeakingPart,
   VocabTopic, FullVocabTopic, VocabWord, VocabWordDefinition,
   IeltsSet, IeltsSetDetail, FullIeltsSet, IeltsTest, FullIeltsTest, MockTestSection,
   IeltsStatus,
@@ -80,8 +80,8 @@ export async function fetchReadingTestById(id: string): Promise<ReadingTestDetai
   return mapReadingTestDetail(data.data)
 }
 
-export async function createReadingTest(payload: { title: string; type?: string; durationMinutes?: number }): Promise<ReadingTestDetail> {
-  const { data } = await httpClient.post<ApiResponse<ApiReadingTestDetail>>('/api/admin/ielts/reading', { title: payload.title, type: payload.type ?? 'academic', durationMinutes: payload.durationMinutes ?? 60 })
+export async function createReadingTest(payload: { title: string; type?: string; durationMinutes?: number; setId?: string; testId?: string }): Promise<ReadingTestDetail> {
+  const { data } = await httpClient.post<ApiResponse<ApiReadingTestDetail>>('/api/admin/ielts/reading', { title: payload.title, type: payload.type ?? 'academic', durationMinutes: payload.durationMinutes ?? 60, setId: payload.setId, testId: payload.testId })
   return mapReadingTestDetail(data.data)
 }
 
@@ -144,31 +144,33 @@ export async function deleteReadingQuestion(questionId: string): Promise<void> {
 // ─── Listening ────────────────────────────────────────────────────────────────
 
 type ApiListeningQuestion = { id: string; questionNumber: number; type: string; stem: string; correctAnswer: string; options?: unknown }
-type ApiListeningSection = { id: string; sectionNumber: number; audioUrl: string; audioDurationSeconds: number; transcript: string; questions: ApiListeningQuestion[]; layout?: unknown }
+type ApiListeningSectionDto = { id: string; listeningTestId: string; sectionNumber: number; audioUrl: string; audioDurationSeconds: number; transcript: string; layout?: unknown; questionCount: number }
 type ApiListeningTestSummary = { id: string; title: string; sectionCount: number; questionCount: number; durationMinutes: number; status: string; createdAt: string; setName?: string; testName?: string }
-type ApiFullListeningTest = { id: string; title: string; durationMinutes: number; status: string; createdAt: string; setId?: string; setName?: string; testId?: string; testName?: string; sections: ApiListeningSection[] }
+type ApiListeningTestDetail = { id: string; title: string; durationMinutes: number; status: string; createdAt: string; setId?: string; setName?: string; testId?: string; testName?: string }
 
 function mapListeningQuestion(q: ApiListeningQuestion): ListeningQuestion {
   return { id: q.id, type: q.type as ListeningQuestion['type'], questionNumber: q.questionNumber, stem: q.stem, correctAnswer: q.correctAnswer, options: q.options as ListeningQuestion['options'] }
+}
+
+function mapListeningQuestionToRequest(q: ListeningQuestion) {
+  return { questionNumber: q.questionNumber, type: q.type, stem: q.stem, correctAnswer: q.correctAnswer, optionsJson: q.options ? JSON.stringify(q.options) : undefined }
 }
 
 function mapListeningTestSummary(r: ApiListeningTestSummary): ListeningTest {
   return { id: r.id, title: r.title, sectionCount: r.sectionCount, questionCount: r.questionCount, durationMinutes: r.durationMinutes, audioUrl: null, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName }
 }
 
-function mapFullListeningTest(r: ApiFullListeningTest): FullListeningTest {
-  const summary: ListeningTest = { id: r.id, title: r.title, sectionCount: r.sections.length, questionCount: r.sections.reduce((n, s) => n + s.questions.length, 0), durationMinutes: r.durationMinutes, audioUrl: null, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName }
-  return { ...summary, setId: r.setId, testId: r.testId, sections: r.sections.map(s => ({ id: s.id, sectionNumber: s.sectionNumber as 1|2|3|4, audioUrl: s.audioUrl, audioDurationSeconds: s.audioDurationSeconds, transcript: s.transcript, questions: s.questions.map(mapListeningQuestion), layout: s.layout as ListeningSection['layout'] })) }
+function mapListeningTestDetail(r: ApiListeningTestDetail): ListeningTestDetail {
+  return { id: r.id, title: r.title, durationMinutes: r.durationMinutes, status: r.status as IeltsStatus, createdAt: r.createdAt, setId: r.setId, setName: r.setName, testId: r.testId, testName: r.testName }
 }
 
-function mapListeningTestToUpdateRequest(test: FullListeningTest) {
-  return {
-    title: test.title, durationMinutes: test.durationMinutes, status: test.status,
-    sections: test.sections.map(s => ({ sectionNumber: s.sectionNumber, audioUrl: s.audioUrl, audioDurationSeconds: s.audioDurationSeconds, transcript: s.transcript, questions: s.questions.map(q => ({ questionNumber: q.questionNumber, type: q.type, stem: q.stem, correctAnswer: q.correctAnswer, optionsJson: q.options ? JSON.stringify(q.options) : undefined })), layoutJson: s.layout ? JSON.stringify(s.layout) : undefined }))
-  }
+function mapListeningSection(s: ApiListeningSectionDto): ListeningSection {
+  return { id: s.id, listeningTestId: s.listeningTestId, sectionNumber: s.sectionNumber as 1|2|3|4, audioUrl: s.audioUrl, audioDurationSeconds: s.audioDurationSeconds, transcript: s.transcript, questionCount: s.questionCount, layout: s.layout as ListeningSection['layout'] }
 }
 
 export type ListeningTestsPage = { items: ListeningTest[]; totalCount: number; totalPages: number; page: number; pageSize: number }
+export type ListeningSectionsPage = { items: ListeningSection[]; totalCount: number; totalPages: number; page: number; pageSize: number }
+export type ListeningQuestionsPage = { items: ListeningQuestion[]; totalCount: number; totalPages: number; page: number; pageSize: number }
 
 export async function fetchListeningTests(page = 1, pageSize = 20, status?: string, setId?: string, testId?: string): Promise<ListeningTestsPage> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
@@ -180,23 +182,72 @@ export async function fetchListeningTests(page = 1, pageSize = 20, status?: stri
   return { items: r.items.map(mapListeningTestSummary), totalCount: r.totalCount, totalPages: r.totalPages, page: r.page, pageSize: r.pageSize }
 }
 
-export async function fetchListeningTestById(id: string): Promise<FullListeningTest> {
-  const { data } = await httpClient.get<ApiResponse<ApiFullListeningTest>>(`/api/admin/ielts/listening/${id}`)
-  return mapFullListeningTest(data.data)
+export async function fetchListeningTestById(id: string): Promise<ListeningTestDetail> {
+  const { data } = await httpClient.get<ApiResponse<ApiListeningTestDetail>>(`/api/admin/ielts/listening/${id}`)
+  return mapListeningTestDetail(data.data)
 }
 
-export async function createListeningTest(payload: { title: string; durationMinutes?: number }): Promise<ListeningTest> {
-  const { data } = await httpClient.post<ApiResponse<ApiListeningTestSummary>>('/api/admin/ielts/listening', { title: payload.title, durationMinutes: payload.durationMinutes ?? 40, sections: [] })
-  return mapListeningTestSummary(data.data)
+export async function createListeningTest(payload: { title: string; durationMinutes?: number; setId?: string; testId?: string }): Promise<ListeningTestDetail> {
+  const { data } = await httpClient.post<ApiResponse<ApiListeningTestDetail>>('/api/admin/ielts/listening', { title: payload.title, durationMinutes: payload.durationMinutes ?? 40, setId: payload.setId, testId: payload.testId })
+  return mapListeningTestDetail(data.data)
 }
 
-export async function updateListeningTest(id: string, test: FullListeningTest): Promise<FullListeningTest> {
-  const { data } = await httpClient.put<ApiResponse<ApiFullListeningTest>>(`/api/admin/ielts/listening/${id}`, mapListeningTestToUpdateRequest(test))
-  return mapFullListeningTest(data.data)
+export async function updateListeningTest(id: string, payload: { title: string; durationMinutes: number; status: IeltsStatus; setId?: string; testId?: string }): Promise<ListeningTestDetail> {
+  const { data } = await httpClient.put<ApiResponse<ApiListeningTestDetail>>(`/api/admin/ielts/listening/${id}`, payload)
+  return mapListeningTestDetail(data.data)
 }
 
 export async function deleteListeningTest(id: string): Promise<void> {
   await httpClient.delete(`/api/admin/ielts/listening/${id}`)
+}
+
+export async function fetchListeningSections(testId: string, page = 1, pageSize = 10): Promise<ListeningSectionsPage> {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+  const { data } = await httpClient.get<ApiResponse<PagedResult<ApiListeningSectionDto>>>(`/api/admin/ielts/listening/${testId}/sections?${params}`)
+  const r = data.data
+  return { items: r.items.map(mapListeningSection), totalCount: r.totalCount, totalPages: r.totalPages, page: r.page, pageSize: r.pageSize }
+}
+
+export async function fetchListeningSectionById(sectionId: string): Promise<ListeningSection> {
+  const { data } = await httpClient.get<ApiResponse<ApiListeningSectionDto>>(`/api/admin/ielts/listening/sections/${sectionId}`)
+  return mapListeningSection(data.data)
+}
+
+type ListeningSectionPayload = { sectionNumber: number; audioUrl: string; audioDurationSeconds: number; transcript: string; layoutJson?: string }
+
+export async function createListeningSection(testId: string, payload: ListeningSectionPayload): Promise<ListeningSection> {
+  const { data } = await httpClient.post<ApiResponse<ApiListeningSectionDto>>(`/api/admin/ielts/listening/${testId}/sections`, payload)
+  return mapListeningSection(data.data)
+}
+
+export async function updateListeningSection(sectionId: string, payload: ListeningSectionPayload): Promise<ListeningSection> {
+  const { data } = await httpClient.put<ApiResponse<ApiListeningSectionDto>>(`/api/admin/ielts/listening/sections/${sectionId}`, payload)
+  return mapListeningSection(data.data)
+}
+
+export async function deleteListeningSection(sectionId: string): Promise<void> {
+  await httpClient.delete(`/api/admin/ielts/listening/sections/${sectionId}`)
+}
+
+export async function fetchListeningQuestions(sectionId: string, page = 1, pageSize = 20): Promise<ListeningQuestionsPage> {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+  const { data } = await httpClient.get<ApiResponse<PagedResult<ApiListeningQuestion>>>(`/api/admin/ielts/listening/sections/${sectionId}/questions?${params}`)
+  const r = data.data
+  return { items: r.items.map(mapListeningQuestion), totalCount: r.totalCount, totalPages: r.totalPages, page: r.page, pageSize: r.pageSize }
+}
+
+export async function createListeningQuestion(sectionId: string, question: ListeningQuestion): Promise<ListeningQuestion> {
+  const { data } = await httpClient.post<ApiResponse<ApiListeningQuestion>>(`/api/admin/ielts/listening/sections/${sectionId}/questions`, mapListeningQuestionToRequest(question))
+  return mapListeningQuestion(data.data)
+}
+
+export async function updateListeningQuestion(questionId: string, question: ListeningQuestion): Promise<ListeningQuestion> {
+  const { data } = await httpClient.put<ApiResponse<ApiListeningQuestion>>(`/api/admin/ielts/listening/questions/${questionId}`, mapListeningQuestionToRequest(question))
+  return mapListeningQuestion(data.data)
+}
+
+export async function deleteListeningQuestion(questionId: string): Promise<void> {
+  await httpClient.delete(`/api/admin/ielts/listening/questions/${questionId}`)
 }
 
 // ─── Writing ──────────────────────────────────────────────────────────────────
@@ -229,8 +280,8 @@ export async function fetchWritingTaskById(id: string): Promise<FullWritingTask>
   return mapFullWritingTask(data.data)
 }
 
-export async function createWritingTask(payload: { title: string; type?: string }): Promise<WritingTask> {
-  const { data } = await httpClient.post<ApiResponse<ApiWritingTaskSummary>>('/api/admin/ielts/writing', { title: payload.title, type: payload.type ?? 'task1', prompt: '', wordMinimum: 150, timeMinutes: 20 })
+export async function createWritingTask(payload: { title: string; type?: string; setId?: string; testId?: string }): Promise<WritingTask> {
+  const { data } = await httpClient.post<ApiResponse<ApiWritingTaskSummary>>('/api/admin/ielts/writing', { title: payload.title, type: payload.type ?? 'task1', prompt: '', wordMinimum: 150, timeMinutes: 20, setId: payload.setId, testId: payload.testId })
   return mapWritingTaskSummary(data.data)
 }
 
@@ -247,14 +298,18 @@ export async function deleteWritingTask(id: string): Promise<void> {
 
 type ApiSpeakingPart = { id: string; partNumber: number; topic: string; questions: string[]; cueCardPrompt?: string; preparationSeconds?: number; speakingMinutes: number }
 type ApiSpeakingSessionSummary = { id: string; title: string; topic: string; partCount: number; status: string; createdAt: string; setName?: string; testName?: string }
-type ApiFullSpeakingSession = { id: string; title: string; topic: string; status: string; createdAt: string; setId?: string; setName?: string; testId?: string; testName?: string; parts: ApiSpeakingPart[] }
+type ApiSpeakingSessionDetail = { id: string; title: string; topic: string; status: string; createdAt: string; setId?: string; setName?: string; testId?: string; testName?: string }
 
 function mapSpeakingSessionSummary(r: ApiSpeakingSessionSummary): SpeakingSession {
   return { id: r.id, title: r.title, topic: r.topic, partCount: r.partCount, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName }
 }
 
-function mapFullSpeakingSession(r: ApiFullSpeakingSession): FullSpeakingSession {
-  return { id: r.id, title: r.title, topic: r.topic, partCount: r.parts.length, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName, setId: r.setId, testId: r.testId, parts: r.parts.map(p => ({ part: p.partNumber as 1|2|3, topic: p.topic, questions: p.questions, cueCardPrompt: p.cueCardPrompt, preparationSeconds: p.preparationSeconds, speakingMinutes: p.speakingMinutes })) }
+function mapSpeakingPart(p: ApiSpeakingPart): SpeakingPart {
+  return { id: p.id, part: p.partNumber as 1 | 2 | 3, topic: p.topic, questions: p.questions, cueCardPrompt: p.cueCardPrompt, preparationSeconds: p.preparationSeconds, speakingMinutes: p.speakingMinutes }
+}
+
+function mapSpeakingSessionDetail(r: ApiSpeakingSessionDetail, partCount: number): FullSpeakingSession {
+  return { id: r.id, title: r.title, topic: r.topic, partCount, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName, setId: r.setId, testId: r.testId }
 }
 
 export type SpeakingSessionsPage = { items: SpeakingSession[]; totalCount: number; totalPages: number; page: number; pageSize: number }
@@ -270,18 +325,40 @@ export async function fetchSpeakingSessions(page = 1, pageSize = 20, status?: st
 }
 
 export async function fetchSpeakingSessionById(id: string): Promise<FullSpeakingSession> {
-  const { data } = await httpClient.get<ApiResponse<ApiFullSpeakingSession>>(`/api/admin/ielts/speaking/${id}`)
-  return mapFullSpeakingSession(data.data)
+  const [{ data }, parts] = await Promise.all([
+    httpClient.get<ApiResponse<ApiSpeakingSessionDetail>>(`/api/admin/ielts/speaking/${id}`),
+    fetchSpeakingParts(id),
+  ])
+  return mapSpeakingSessionDetail(data.data, parts.length)
 }
 
-export async function createSpeakingSession(payload: { title: string }): Promise<SpeakingSession> {
-  const { data } = await httpClient.post<ApiResponse<ApiSpeakingSessionSummary>>('/api/admin/ielts/speaking', { title: payload.title, topic: '', parts: [] })
-  return mapSpeakingSessionSummary(data.data)
+export async function fetchSpeakingParts(sessionId: string): Promise<SpeakingPart[]> {
+  const { data } = await httpClient.get<ApiResponse<ApiSpeakingPart[]>>(`/api/admin/ielts/speaking/${sessionId}/parts`)
+  return data.data.map(mapSpeakingPart)
+}
+
+export async function createSpeakingPart(sessionId: string, part: SpeakingPart): Promise<SpeakingPart> {
+  const { data } = await httpClient.post<ApiResponse<ApiSpeakingPart>>(`/api/admin/ielts/speaking/${sessionId}/parts`, { partNumber: part.part, topic: part.topic, questions: part.questions, cueCardPrompt: part.cueCardPrompt, preparationSeconds: part.preparationSeconds, speakingMinutes: part.speakingMinutes })
+  return mapSpeakingPart(data.data)
+}
+
+export async function updateSpeakingPart(partId: string, part: SpeakingPart): Promise<SpeakingPart> {
+  const { data } = await httpClient.put<ApiResponse<ApiSpeakingPart>>(`/api/admin/ielts/speaking/parts/${partId}`, { partNumber: part.part, topic: part.topic, questions: part.questions, cueCardPrompt: part.cueCardPrompt, preparationSeconds: part.preparationSeconds, speakingMinutes: part.speakingMinutes })
+  return mapSpeakingPart(data.data)
+}
+
+export async function deleteSpeakingPart(partId: string): Promise<void> {
+  await httpClient.delete(`/api/admin/ielts/speaking/parts/${partId}`)
+}
+
+export async function createSpeakingSession(payload: { title: string; setId?: string; testId?: string }): Promise<FullSpeakingSession> {
+  const { data } = await httpClient.post<ApiResponse<ApiSpeakingSessionDetail>>('/api/admin/ielts/speaking', { title: payload.title, topic: '', setId: payload.setId, testId: payload.testId })
+  return mapSpeakingSessionDetail(data.data, 0)
 }
 
 export async function updateSpeakingSession(id: string, session: FullSpeakingSession): Promise<FullSpeakingSession> {
-  const { data } = await httpClient.put<ApiResponse<ApiFullSpeakingSession>>(`/api/admin/ielts/speaking/${id}`, { title: session.title, topic: session.topic, status: session.status, parts: session.parts.map(p => ({ partNumber: p.part, topic: p.topic, questions: p.questions, cueCardPrompt: p.cueCardPrompt, preparationSeconds: p.preparationSeconds, speakingMinutes: p.speakingMinutes })) })
-  return mapFullSpeakingSession(data.data)
+  const { data } = await httpClient.put<ApiResponse<ApiSpeakingSessionDetail>>(`/api/admin/ielts/speaking/${id}`, { title: session.title, topic: session.topic, status: session.status, setId: session.setId, testId: session.testId })
+  return mapSpeakingSessionDetail(data.data, session.partCount)
 }
 
 export async function deleteSpeakingSession(id: string): Promise<void> {

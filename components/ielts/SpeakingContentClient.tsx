@@ -14,8 +14,6 @@ import {
   deleteSpeakingSession,
   fetchIeltsSets,
   fetchFullIeltsSet,
-  linkContentToTest,
-  unlinkContentFromTest,
 } from '@/lib/api/ielts'
 import { toSpeakingRows } from '@/lib/data/ielts-rows'
 
@@ -90,27 +88,13 @@ export function SpeakingContentClient() {
   }, [])
 
   async function onCreate(data: { title: string; type: string; setId?: string; testId?: string }) {
-    const session = await createSpeakingSession({ title: data.title })
-
-    if (data.setId && data.testId) {
-      try { await linkContentToTest(data.setId, data.testId, 'speaking', session.id) } catch { /* best-effort */ }
-    }
-
+    const session = await createSpeakingSession({ title: data.title, setId: data.setId, testId: data.testId })
     return { id: session.id, createdAt: session.createdAt }
   }
 
   async function onUpdate(id: string, data: { title: string; type: string; status: IeltsStatus; setId?: string; testId?: string }) {
     const current = await fetchSpeakingSessionById(id)
-    await updateSpeakingSession(id, { ...current, title: data.title, status: data.status })
-
-    if (current.setId !== data.setId || current.testId !== data.testId) {
-      if (current.setId && current.testId) {
-        try { await unlinkContentFromTest(current.setId, current.testId, 'speaking', id) } catch { /* best-effort */ }
-      }
-      if (data.setId && data.testId) {
-        try { await linkContentToTest(data.setId, data.testId, 'speaking', id) } catch { /* best-effort */ }
-      }
-    }
+    await updateSpeakingSession(id, { ...current, title: data.title, status: data.status, setId: data.setId, testId: data.testId })
   }
 
   async function onDelete(id: string) {

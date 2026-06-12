@@ -1,21 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, ChevronUp, ChevronDown, Pencil, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
 import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
+import { DataTablePagination } from '@/components/ui/DataTable/DataTablePagination'
 import { ListeningQuestionFormModal } from './ListeningQuestionFormModal'
 import { QuestionsDataTable } from './QuestionsDataTable'
 import { TableNodeFormModal } from './layout/TableNodeFormModal'
 import { McqGroupNodeFormModal } from './layout/McqGroupNodeFormModal'
 import { GapFillNodeFormModal } from './layout/GapFillNodeFormModal'
 import { ImageLabelNodeFormModal } from './layout/ImageLabelNodeFormModal'
-import type { FullListeningTest, ListeningSection, ListeningQuestion, ListeningLayoutNode, SetContext } from '@/lib/types/ielts'
+import type { ListeningTestDetail, ListeningSection, ListeningQuestion, ListeningLayoutNode, FullListeningTest, SetContext } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
-import { updateListeningTest } from '@/lib/api/ielts'
+import {
+  fetchListeningQuestions, createListeningQuestion, updateListeningQuestion, deleteListeningQuestion,
+  fetchListeningSections, updateListeningSection,
+  type ListeningQuestionsPage,
+} from '@/lib/api/ielts'
 import { getLayoutAnswerKeys } from '@/lib/utils/listening-layout'
 
 const typeLabels: Record<ListeningQuestion['type'], string> = {
@@ -60,13 +66,16 @@ function formatDuration(seconds: number) {
 }
 
 type ListeningSectionShellProps = {
-  test: FullListeningTest
+  test: ListeningTestDetail
   section: ListeningSection
+  initialQuestionsPage: ListeningQuestionsPage
   setContext?: SetContext
 }
 
-export function ListeningSectionShell({ test, section: initialSection, setContext }: ListeningSectionShellProps) {
+export function ListeningSectionShell({ test, section: initialSection, initialQuestionsPage, setContext }: ListeningSectionShellProps) {
   const [section, setSection] = useState(initialSection)
+  const [questionsPage, setQuestionsPage] = useState(initialQuestionsPage)
+  const [loading, setLoading] = useState(false)
   const [transcript, setTranscript] = useState(initialSection.transcript)
   const [transcriptDirty, setTranscriptDirty] = useState(false)
   const [questionModalOpen, setQuestionModalOpen] = useState(false)
@@ -81,13 +90,31 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
   const [imageLabelModalOpen, setImageLabelModalOpen] = useState(false)
   const [deleteLayoutTarget, setDeleteLayoutTarget] = useState<ListeningLayoutNode | null>(null)
 
+  // All sections + their questions, assembled for the layout node modals'
+  // cross-section question-numbering logic (getNextQuestionNumber).
+  const [otherSections, setOtherSections] = useState<(ListeningSection & { questions: ListeningQuestion[] })[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchListeningSections(test.id, 1, 10)
+      .then(async (sp) => {
+        const others = sp.items.filter((s) => s.id !== section.id)
+        const withQuestions = await Promise.all(
+          others.map(async (s) => ({ ...s, questions: (await fetchListeningQuestions(s.id, 1, 50)).items }))
+        )
+        if (!cancelled) setOtherSections(withQuestions)
+      })
+      .catch(() => { /* best-effort */ })
+    return () => { cancelled = true }
+  }, [test.id, section.id])
+
   const layoutNodes = section.layout?.nodes ?? []
 
   // Reflects the live section state so question-number suggestions in the
   // node editors account for edits made earlier in this session.
   const effectiveTest: FullListeningTest = {
     ...test,
-    sections: test.sections.map((s) => (s.id === section.id ? section : s)),
+    sections: [...otherSections, { ...section, questions: questionsPage.items }],
   }
 
   const openAddLayoutModal = (type: ListeningLayoutNode['type']) => {
@@ -106,42 +133,73 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
     else setImageLabelModalOpen(true)
   }
 
-  const persistTestWith = async (updatedSection: ListeningSection) => {
-    const updatedTest = { ...test, sections: test.sections.map(s => s.id === updatedSection.id ? updatedSection : s) }
-    try { await updateListeningTest(test.id, updatedTest) } catch { /* best-effort */ }
+  const persistSection = async (updated: ListeningSection) => {
+    try {
+      await updateListeningSection(updated.id, {
+        sectionNumber: updated.sectionNumber,
+        audioUrl: updated.audioUrl,
+        audioDurationSeconds: updated.audioDurationSeconds,
+        transcript: updated.transcript,
+        layoutJson: updated.layout ? JSON.stringify(updated.layout) : undefined,
+      })
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to save section.')
+    }
   }
 
   const handleTranscriptSave = async () => {
-    const updatedSection = { ...section, transcript }
-    setSection(updatedSection)
+    const updated = { ...section, transcript }
+    setSection(updated)
     setTranscriptDirty(false)
-    await persistTestWith(updatedSection)
+    await persistSection(updated)
   }
 
   const handleQuestionSave = async (q: ListeningQuestion) => {
-    setSection((prev) => {
-      const existing = prev.questions.findIndex((x) => x.id === q.id)
-      let updatedSection: ListeningSection
-      if (existing >= 0) {
-        const updated = [...prev.questions]
-        updated[existing] = q
-        updatedSection = { ...prev, questions: updated }
+    setLoading(true)
+    try {
+      if (editingQuestion) {
+        await updateListeningQuestion(editingQuestion.id, q)
       } else {
-        updatedSection = { ...prev, questions: [...prev.questions, q] }
+        await createListeningQuestion(section.id, q)
       }
-      persistTestWith(updatedSection)
-      return updatedSection
-    })
+      const refreshed = await fetchListeningQuestions(section.id, questionsPage.page, questionsPage.pageSize)
+      setQuestionsPage(refreshed)
+      setSection((prev) => ({ ...prev, questionCount: refreshed.totalCount }))
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to save question.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDeleteQuestion = async () => {
     if (!deleteTarget) return
-    setSection((prev) => {
-      const updatedSection = { ...prev, questions: prev.questions.filter((q) => q.id !== deleteTarget.id) }
-      persistTestWith(updatedSection)
-      return updatedSection
-    })
-    setDeleteTarget(null)
+    setLoading(true)
+    try {
+      await deleteListeningQuestion(deleteTarget.id)
+      const remaining = questionsPage.totalCount - 1
+      const targetPage = Math.min(questionsPage.page, Math.max(1, Math.ceil(remaining / questionsPage.pageSize)))
+      const refreshed = await fetchListeningQuestions(section.id, targetPage, questionsPage.pageSize)
+      setQuestionsPage(refreshed)
+      setSection((prev) => ({ ...prev, questionCount: refreshed.totalCount }))
+      setDeleteTarget(null)
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to delete question.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePageChange = async (page: number) => {
+    setLoading(true)
+    try {
+      const refreshed = await fetchListeningQuestions(section.id, page, questionsPage.pageSize)
+      setQuestionsPage(refreshed)
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to load questions.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSaveLayoutNode = (node: ListeningLayoutNode) => {
@@ -151,9 +209,9 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
       const updatedNodes = index >= 0
         ? nodes.map((n, i) => (i === index ? node : n))
         : [...nodes, node]
-      const updatedSection = { ...prev, layout: { nodes: updatedNodes } }
-      persistTestWith(updatedSection)
-      return updatedSection
+      const updated = { ...prev, layout: { nodes: updatedNodes } }
+      persistSection(updated)
+      return updated
     })
   }
 
@@ -164,9 +222,9 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
       if (target < 0 || target >= nodes.length) return prev
       const updatedNodes = [...nodes]
       ;[updatedNodes[index], updatedNodes[target]] = [updatedNodes[target], updatedNodes[index]]
-      const updatedSection = { ...prev, layout: { nodes: updatedNodes } }
-      persistTestWith(updatedSection)
-      return updatedSection
+      const updated = { ...prev, layout: { nodes: updatedNodes } }
+      persistSection(updated)
+      return updated
     })
   }
 
@@ -174,14 +232,12 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
     if (!deleteLayoutTarget) return
     setSection((prev) => {
       const nodes = (prev.layout?.nodes ?? []).filter((n) => n.id !== deleteLayoutTarget.id)
-      const updatedSection = { ...prev, layout: { nodes } }
-      persistTestWith(updatedSection)
-      return updatedSection
+      const updated = { ...prev, layout: { nodes } }
+      persistSection(updated)
+      return updated
     })
     setDeleteLayoutTarget(null)
   }
-
-  const sortedQuestions = [...section.questions].sort((a, b) => a.questionNumber - b.questionNumber)
 
   return (
     <>
@@ -200,7 +256,7 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
 
         <PageHeader
           title={`Section ${section.sectionNumber}`}
-          description={`${formatDuration(section.audioDurationSeconds)} · ${section.questions.length} questions`}
+          description={`${formatDuration(section.audioDurationSeconds)} · ${section.questionCount} questions`}
         />
 
         {/* Audio info */}
@@ -238,7 +294,7 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Questions ({sortedQuestions.length})
+              Questions ({section.questionCount})
             </h2>
             <RoleGate permission="ielts:edit">
               <Button size="sm" onClick={() => { setEditingQuestion(null); setQuestionModalOpen(true) }}>
@@ -248,7 +304,7 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
             </RoleGate>
           </div>
 
-          {sortedQuestions.length === 0 ? (
+          {questionsPage.items.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border py-10 text-center">
               <p className="text-sm text-muted-foreground">No questions yet.</p>
               <button
@@ -259,14 +315,25 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
               </button>
             </div>
           ) : (
-            <QuestionsDataTable
-              questions={sortedQuestions}
-              getTypeLabel={(q) => typeLabels[q.type]}
-              getTypeVariant={(q) => typeVariants[q.type]}
-              getStem={(q) => q.stem}
-              onEdit={(q) => { setEditingQuestion(q); setQuestionModalOpen(true) }}
-              onDelete={setDeleteTarget}
-            />
+            <>
+              <QuestionsDataTable
+                questions={questionsPage.items}
+                getTypeLabel={(q) => typeLabels[q.type]}
+                getTypeVariant={(q) => typeVariants[q.type]}
+                getStem={(q) => q.stem}
+                onEdit={(q) => { setEditingQuestion(q); setQuestionModalOpen(true) }}
+                onDelete={setDeleteTarget}
+              />
+              <DataTablePagination
+                page={questionsPage.page}
+                totalPages={questionsPage.totalPages}
+                totalCount={questionsPage.totalCount}
+                sourceCount={questionsPage.totalCount}
+                onPageChange={handlePageChange}
+                loading={loading}
+                countLabel={`${questionsPage.totalCount} question${questionsPage.totalCount !== 1 ? 's' : ''}`}
+              />
+            </>
           )}
         </div>
 
@@ -375,7 +442,7 @@ export function ListeningSectionShell({ test, section: initialSection, setContex
         open={questionModalOpen}
         onClose={() => setQuestionModalOpen(false)}
         editing={editingQuestion}
-        nextQuestionNumber={sortedQuestions.length + 1}
+        nextQuestionNumber={section.questionCount + 1}
         onSave={handleQuestionSave}
       />
 

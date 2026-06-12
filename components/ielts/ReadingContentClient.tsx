@@ -12,7 +12,6 @@ import {
   fetchReadingTestById,
   updateReadingTest,
   deleteReadingTest,
-  linkContentToTest,
 } from '@/lib/api/ielts'
 import { toReadingRows } from '@/lib/data/ielts-rows'
 
@@ -81,12 +80,7 @@ export function ReadingContentClient({
   }, [page, pageSize, selectedSetId, selectedTestId])
 
   async function onCreate(data: { title: string; type: string; setId?: string; testId?: string }) {
-    const test = await createReadingTest({ title: data.title, type: data.type })
-
-    if (data.setId && data.testId) {
-      try { await linkContentToTest(data.setId, data.testId, 'reading', test.id) } catch { /* best-effort */ }
-    }
-
+    const test = await createReadingTest({ title: data.title, type: data.type, setId: data.setId, testId: data.testId })
     return { id: test.id, createdAt: test.createdAt }
   }
 

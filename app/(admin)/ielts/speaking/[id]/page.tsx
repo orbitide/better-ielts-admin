@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getFullSpeakingSession } from '@/lib/data/ielts'
+import { getSpeakingSessionDetail, getSpeakingParts } from '@/lib/data/ielts'
 import { SpeakingSessionDetailShell } from '@/components/ielts/SpeakingSessionDetailShell'
 import type { SetContext } from '@/lib/types/ielts'
 
@@ -12,7 +12,7 @@ export default async function SpeakingSessionDetailPage({
 }) {
   const { id } = await params
   const sp = await searchParams
-  const session = await getFullSpeakingSession(id)
+  const [session, parts] = await Promise.all([getSpeakingSessionDetail(id), getSpeakingParts(id)])
   if (!session) notFound()
 
   const setContext: SetContext | undefined =
@@ -25,5 +25,5 @@ export default async function SpeakingSessionDetailPage({
         }
       : undefined
 
-  return <SpeakingSessionDetailShell session={session} setContext={setContext} />
+  return <SpeakingSessionDetailShell session={session} initialParts={parts ?? []} setContext={setContext} />
 }

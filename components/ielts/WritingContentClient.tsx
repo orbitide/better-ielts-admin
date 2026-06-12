@@ -90,12 +90,7 @@ export function WritingContentClient() {
   }, [])
 
   async function onCreate(data: { title: string; type: string; setId?: string; testId?: string }) {
-    const task = await createWritingTask({ title: data.title, type: data.type })
-
-    if (data.setId && data.testId) {
-      try { await linkContentToTest(data.setId, data.testId, 'writing', task.id) } catch { /* best-effort */ }
-    }
-
+    const task = await createWritingTask({ title: data.title, type: data.type, setId: data.setId, testId: data.testId })
     return { id: task.id, createdAt: task.createdAt }
   }
 

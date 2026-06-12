@@ -10,7 +10,7 @@ import { ContentFormModal } from './ContentFormModal'
 import { SpeakingPartCard } from './SpeakingPartCard'
 import { Breadcrumb } from './Breadcrumb'
 import type { FullSpeakingSession, SpeakingPart, IeltsStatus, SetContext } from '@/lib/types/ielts'
-import { updateSpeakingSession } from '@/lib/api/ielts'
+import { updateSpeakingSession, createSpeakingPart, updateSpeakingPart } from '@/lib/api/ielts'
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
   published: 'success',
@@ -20,11 +20,13 @@ const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = 
 
 type SpeakingSessionDetailShellProps = {
   session: FullSpeakingSession
+  initialParts: SpeakingPart[]
   setContext?: SetContext
 }
 
-export function SpeakingSessionDetailShell({ session: initial, setContext }: SpeakingSessionDetailShellProps) {
+export function SpeakingSessionDetailShell({ session: initial, initialParts, setContext }: SpeakingSessionDetailShellProps) {
   const [session, setSession] = useState(initial)
+  const [parts, setParts] = useState(initialParts)
   const [metaModalOpen, setMetaModalOpen] = useState(false)
 
   const handleMetaSave = async ({ title, status }: { title: string; type: string; status: IeltsStatus }) => {
@@ -32,7 +34,7 @@ export function SpeakingSessionDetailShell({ session: initial, setContext }: Spe
     const updated = { ...session, title, status }
     setSession(updated)
     try {
-      const saved = await updateSpeakingSession(session.id, updated)
+      const saved = await updateSpeakingSession(session.id, { ...updated, partCount: parts.length })
       setSession(saved)
     } catch (err) {
       setSession(prev)
@@ -41,14 +43,15 @@ export function SpeakingSessionDetailShell({ session: initial, setContext }: Spe
   }
 
   const handlePartUpdate = async (updatedPart: SpeakingPart) => {
-    const prev = session
-    const updated = { ...session, parts: session.parts.map((p) => (p.part === updatedPart.part ? updatedPart : p)) }
-    setSession(updated)
+    const prev = parts
+    setParts(parts.map((p) => (p.part === updatedPart.part ? updatedPart : p)))
     try {
-      const saved = await updateSpeakingSession(session.id, updated)
-      setSession(saved)
+      if (updatedPart.id) {
+        const saved = await updateSpeakingPart(updatedPart.id, updatedPart)
+        setParts((current) => current.map((p) => (p.part === saved.part ? saved : p)))
+      }
     } catch (err) {
-      setSession(prev)
+      setParts(prev)
       toast.error((err as Error).message ?? 'Failed to save part.')
     }
   }
@@ -61,20 +64,17 @@ export function SpeakingSessionDetailShell({ session: initial, setContext }: Spe
       speakingMinutes: partNumber === 2 ? 3 : 4,
       ...(partNumber === 2 && { cueCardPrompt: '', preparationSeconds: 60 }),
     }
-    const prev = session
-    const updated = { ...session, parts: [...session.parts, newPart].sort((a, b) => a.part - b.part), partCount: session.parts.length + 1 }
-    setSession(updated)
     try {
-      const saved = await updateSpeakingSession(session.id, updated)
-      setSession(saved)
+      const saved = await createSpeakingPart(session.id, newPart)
+      setParts((current) => [...current, saved].sort((a, b) => a.part - b.part))
+      setSession((current) => ({ ...current, partCount: current.partCount + 1 }))
     } catch (err) {
-      setSession(prev)
       toast.error((err as Error).message ?? 'Failed to add part.')
     }
   }
 
-  const sortedParts = [...session.parts].sort((a, b) => a.part - b.part)
-  const missingParts = ([1, 2, 3] as const).filter((n) => !session.parts.some((p) => p.part === n))
+  const sortedParts = [...parts].sort((a, b) => a.part - b.part)
+  const missingParts = ([1, 2, 3] as const).filter((n) => !parts.some((p) => p.part === n))
 
   return (
     <>

@@ -20,13 +20,14 @@ type ListeningSectionFormModalProps = {
   open: boolean
   onClose: () => void
   editing: ListeningSection | null
+  nextSectionNumber?: 1 | 2 | 3 | 4
   onSave: (data: ListeningSectionFormData) => void
 }
 
 const textareaClass =
   'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none'
 
-export function ListeningSectionFormModal({ open, onClose, editing, onSave }: ListeningSectionFormModalProps) {
+export function ListeningSectionFormModal({ open, onClose, editing, nextSectionNumber, onSave }: ListeningSectionFormModalProps) {
   const [sectionNumber, setSectionNumber] = useState<1 | 2 | 3 | 4>(1)
   const [audioUrl, setAudioUrl] = useState('')
   const [audioDurationSeconds, setAudioDurationSeconds] = useState(300)
@@ -40,13 +41,13 @@ export function ListeningSectionFormModal({ open, onClose, editing, onSave }: Li
       setAudioDurationSeconds(editing.audioDurationSeconds)
       setTranscript(editing.transcript)
     } else {
-      setSectionNumber(1)
+      setSectionNumber(nextSectionNumber ?? 1)
       setAudioUrl('')
       setAudioDurationSeconds(300)
       setTranscript('')
     }
     setErrors({})
-  }, [editing, open])
+  }, [editing, nextSectionNumber, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
