@@ -44,17 +44,17 @@ function mapReadingQuestionToRequest(q: ReadingQuestion) {
   return { questionNumber: q.questionNumber, type: q.type, stem, correctAnswer: q.correctAnswer, optionsJson: options ? JSON.stringify(options) : undefined }
 }
 
-type ApiReadingTestDetail = { id: string; title: string; type: string; durationMinutes: number; status: string; createdAt: string }
+type ApiReadingTestDetail = { id: string; title: string; type: string; durationMinutes: number; status: string; createdAt: string; setId?: string; setName?: string; testId?: string; testName?: string }
 type ApiReadingPassage = { id: string; title: string; body: string; wordCount: number }
 type ApiReadingSectionDto = { id: string; readingTestId: string; passageIndex: number; passage: ApiReadingPassage; questionCount: number }
-type ApiReadingTestSummary = { id: string; title: string; type: string; passageCount: number; questionCount: number; durationMinutes: number; status: string; createdAt: string }
+type ApiReadingTestSummary = { id: string; title: string; type: string; passageCount: number; questionCount: number; durationMinutes: number; status: string; createdAt: string; setName?: string; testName?: string }
 
 function mapReadingTestSummary(r: ApiReadingTestSummary): ReadingTest {
-  return { id: r.id, title: r.title, type: r.type as ReadingTest['type'], passageCount: r.passageCount, questionCount: r.questionCount, durationMinutes: r.durationMinutes, status: r.status as IeltsStatus, createdAt: r.createdAt }
+  return { id: r.id, title: r.title, type: r.type as ReadingTest['type'], passageCount: r.passageCount, questionCount: r.questionCount, durationMinutes: r.durationMinutes, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName }
 }
 
 function mapReadingTestDetail(r: ApiReadingTestDetail): ReadingTestDetail {
-  return { id: r.id, title: r.title, type: r.type as ReadingTestDetail['type'], durationMinutes: r.durationMinutes, status: r.status as IeltsStatus, createdAt: r.createdAt }
+  return { id: r.id, title: r.title, type: r.type as ReadingTestDetail['type'], durationMinutes: r.durationMinutes, status: r.status as IeltsStatus, createdAt: r.createdAt, setId: r.setId, setName: r.setName, testId: r.testId, testName: r.testName }
 }
 
 function mapReadingSection(s: ApiReadingSectionDto): ReadingSection {
@@ -145,7 +145,7 @@ export async function deleteReadingQuestion(questionId: string): Promise<void> {
 
 type ApiListeningQuestion = { id: string; questionNumber: number; type: string; stem: string; correctAnswer: string; options?: unknown }
 type ApiListeningSection = { id: string; sectionNumber: number; audioUrl: string; audioDurationSeconds: number; transcript: string; questions: ApiListeningQuestion[]; layout?: unknown }
-type ApiListeningTestSummary = { id: string; title: string; sectionCount: number; questionCount: number; durationMinutes: number; status: string; createdAt: string }
+type ApiListeningTestSummary = { id: string; title: string; sectionCount: number; questionCount: number; durationMinutes: number; status: string; createdAt: string; setName?: string; testName?: string }
 type ApiFullListeningTest = { id: string; title: string; durationMinutes: number; status: string; createdAt: string; sections: ApiListeningSection[] }
 
 function mapListeningQuestion(q: ApiListeningQuestion): ListeningQuestion {
@@ -153,7 +153,7 @@ function mapListeningQuestion(q: ApiListeningQuestion): ListeningQuestion {
 }
 
 function mapListeningTestSummary(r: ApiListeningTestSummary): ListeningTest {
-  return { id: r.id, title: r.title, sectionCount: r.sectionCount, questionCount: r.questionCount, durationMinutes: r.durationMinutes, audioUrl: null, status: r.status as IeltsStatus, createdAt: r.createdAt }
+  return { id: r.id, title: r.title, sectionCount: r.sectionCount, questionCount: r.questionCount, durationMinutes: r.durationMinutes, audioUrl: null, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName }
 }
 
 function mapFullListeningTest(r: ApiFullListeningTest): FullListeningTest {
@@ -201,11 +201,11 @@ export async function deleteListeningTest(id: string): Promise<void> {
 
 // ─── Writing ──────────────────────────────────────────────────────────────────
 
-type ApiWritingTaskSummary = { id: string; title: string; type: string; wordMinimum: number; timeMinutes: number; status: string; createdAt: string }
+type ApiWritingTaskSummary = { id: string; title: string; type: string; wordMinimum: number; timeMinutes: number; status: string; createdAt: string; setName?: string; testName?: string }
 type ApiWritingTaskDetail = ApiWritingTaskSummary & { prompt: string; imageUrl?: string; imageAlt?: string; sampleAnswer?: string }
 
 function mapWritingTaskSummary(r: ApiWritingTaskSummary): WritingTask {
-  return { id: r.id, title: r.title, type: r.type as WritingTask['type'], prompt: '', wordMinimum: r.wordMinimum, timeMinutes: r.timeMinutes, status: r.status as IeltsStatus, createdAt: r.createdAt }
+  return { id: r.id, title: r.title, type: r.type as WritingTask['type'], prompt: '', wordMinimum: r.wordMinimum, timeMinutes: r.timeMinutes, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName }
 }
 
 function mapFullWritingTask(r: ApiWritingTaskDetail): FullWritingTask {
@@ -246,11 +246,11 @@ export async function deleteWritingTask(id: string): Promise<void> {
 // ─── Speaking ─────────────────────────────────────────────────────────────────
 
 type ApiSpeakingPart = { id: string; partNumber: number; topic: string; questions: string[]; cueCardPrompt?: string; preparationSeconds?: number; speakingMinutes: number }
-type ApiSpeakingSessionSummary = { id: string; title: string; topic: string; partCount: number; status: string; createdAt: string }
+type ApiSpeakingSessionSummary = { id: string; title: string; topic: string; partCount: number; status: string; createdAt: string; setName?: string; testName?: string }
 type ApiFullSpeakingSession = { id: string; title: string; topic: string; status: string; createdAt: string; parts: ApiSpeakingPart[] }
 
 function mapSpeakingSessionSummary(r: ApiSpeakingSessionSummary): SpeakingSession {
-  return { id: r.id, title: r.title, topic: r.topic, partCount: r.partCount, status: r.status as IeltsStatus, createdAt: r.createdAt }
+  return { id: r.id, title: r.title, topic: r.topic, partCount: r.partCount, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName }
 }
 
 function mapFullSpeakingSession(r: ApiFullSpeakingSession): FullSpeakingSession {

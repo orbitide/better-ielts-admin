@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Plus, Clock } from 'lucide-react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
@@ -9,18 +10,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable'
 import { AddAdminModal } from './AddAdminModal'
 import { useAdminAuthStore } from '@/lib/store/auth-store'
-import type { ManagedAdmin, AuditLogEntry } from '@/lib/types/admin'
+import { updateAdminAccount, fetchAuditLog } from '@/lib/api/admin'
+import type { AdminRoleOption, ManagedAdmin, AuditLogEntry } from '@/lib/types/admin'
 
-const roleLabels: Record<ManagedAdmin['role'], string> = {
-  SuperAdmin: 'Super Admin',
-  ContentManager: 'Content Manager',
-  Moderator: 'Moderator',
-}
-
-const roleBadgeVariant: Record<ManagedAdmin['role'], 'secondary' | 'warning' | 'success'> = {
+const roleBadgeVariant: Record<string, 'secondary' | 'warning' | 'success'> = {
   SuperAdmin: 'success',
   ContentManager: 'warning',
   Moderator: 'secondary',
+}
+
+function formatRoleLabel(name: string) {
+  return name.replace(/([a-z])([A-Z])/g, '$1 $2')
 }
 
 function formatTimestamp(ts: string) {
@@ -31,46 +31,65 @@ function formatTimestamp(ts: string) {
 type Props = {
   initialAdmins: ManagedAdmin[]
   initialLog: AuditLogEntry[]
+  roles: AdminRoleOption[]
 }
 
-export function AdminsManagementShell({ initialAdmins, initialLog }: Props) {
+export function AdminsManagementShell({ initialAdmins, initialLog, roles }: Props) {
   const [admins, setAdmins] = useState(initialAdmins)
   const [auditLog, setAuditLog] = useState(initialLog)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const currentAdmin = useAdminAuthStore((s) => s.admin)
 
-  const addEntry = (action: string) => {
-    if (!currentAdmin) return
-    setAuditLog((prev) => [
-      {
-        id: `al-${Date.now()}`,
-        adminId: currentAdmin.id,
-        adminName: currentAdmin.name,
-        action,
-        timestamp: new Date().toISOString(),
-      },
-      ...prev,
-    ])
+  const roleLabel = (roleId: string) => {
+    const role = roles.find((r) => r.id === roleId)
+    return role ? formatRoleLabel(role.name) : 'Unknown'
   }
 
-  const handleRoleChange = (id: string, newRole: ManagedAdmin['role']) => {
+  const refreshAuditLog = async () => {
+    try {
+      const log = await fetchAuditLog()
+      setAuditLog(log)
+    } catch {
+      // keep existing log on failure
+    }
+  }
+
+  const handleRoleChange = async (id: string, newRoleId: string) => {
     const target = admins.find((a) => a.id === id)
-    if (!target || target.role === newRole) return
-    setAdmins((prev) => prev.map((a) => a.id === id ? { ...a, role: newRole } : a))
-    addEntry(`Changed ${target.name}'s role from ${roleLabels[target.role]} to ${roleLabels[newRole]}`)
+    if (!target || target.roleId === newRoleId) return
+
+    const previousLabel = roleLabel(target.roleId)
+    const nextLabel = roleLabel(newRoleId)
+
+    try {
+      const updated = await updateAdminAccount(id, { roleId: newRoleId })
+      setAdmins((prev) => prev.map((a) => (a.id === id ? updated : a)))
+      toast.success(`Changed ${target.name}'s role from ${previousLabel} to ${nextLabel}`)
+      await refreshAuditLog()
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to update role.')
+    }
   }
 
-  const handleToggleStatus = (id: string) => {
+  const handleToggleStatus = async (id: string) => {
     const target = admins.find((a) => a.id === id)
     if (!target) return
-    const newStatus = target.status === 'active' ? 'disabled' : 'active'
-    setAdmins((prev) => prev.map((a) => a.id === id ? { ...a, status: newStatus } : a))
-    addEntry(`${newStatus === 'disabled' ? 'Disabled' : 'Enabled'} account for ${target.name}`)
+
+    const nextActive = target.status !== 'active'
+
+    try {
+      const updated = await updateAdminAccount(id, { isActive: nextActive })
+      setAdmins((prev) => prev.map((a) => (a.id === id ? updated : a)))
+      toast.success(`${nextActive ? 'Enabled' : 'Disabled'} account for ${target.name}`)
+      await refreshAuditLog()
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to update status.')
+    }
   }
 
-  const handleAddAdmin = (newAdmin: ManagedAdmin) => {
+  const handleAddAdmin = async (newAdmin: ManagedAdmin) => {
     setAdmins((prev) => [...prev, newAdmin])
-    addEntry(`Added new admin account: ${newAdmin.name} (${roleLabels[newAdmin.role]})`)
+    await refreshAuditLog()
   }
 
   const adminColumns: ColumnDef<ManagedAdmin>[] = [
@@ -93,16 +112,20 @@ export function AdminsManagementShell({ initialAdmins, initialLog }: Props) {
       cell: ({ row }) => {
         const isSelf = row.original.id === currentAdmin?.id
         return isSelf ? (
-          <Badge variant={roleBadgeVariant[row.original.role]}>{roleLabels[row.original.role]}</Badge>
+          <Badge variant={roleBadgeVariant[row.original.role] ?? 'secondary'}>
+            {formatRoleLabel(row.original.role)}
+          </Badge>
         ) : (
           <Select
-            value={row.original.role}
-            onChange={(e) => handleRoleChange(row.original.id, e.target.value as ManagedAdmin['role'])}
+            value={row.original.roleId}
+            onChange={(e) => handleRoleChange(row.original.id, e.target.value)}
             className="text-xs h-7 py-0.5"
           >
-            <option value="SuperAdmin">Super Admin</option>
-            <option value="ContentManager">Content Manager</option>
-            <option value="Moderator">Moderator</option>
+            {roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {formatRoleLabel(role.name)}
+              </option>
+            ))}
           </Select>
         )
       },
@@ -195,6 +218,7 @@ export function AdminsManagementShell({ initialAdmins, initialLog }: Props) {
 
       <AddAdminModal
         open={addModalOpen}
+        roles={roles}
         onClose={() => setAddModalOpen(false)}
         onAdd={handleAddAdmin}
       />

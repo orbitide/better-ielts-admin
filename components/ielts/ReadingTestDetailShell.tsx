@@ -110,6 +110,11 @@ export function ReadingTestDetailShell({ test: initial, initialSectionsPage, set
           { label: setContext.setTitle, href: `/ielts/mock-tests/${setContext.setId}` },
           { label: `Test ${setContext.testIndex}`, href: `/ielts/mock-tests/${setContext.setId}/tests/${setContext.testId}` },
           { label: test.title },
+        ] : test.setId && test.setName && test.testId && test.testName ? [
+          { label: 'Sets', href: '/ielts/mock-tests' },
+          { label: test.setName, href: `/ielts/mock-tests/${test.setId}` },
+          { label: test.testName, href: `/ielts/mock-tests/${test.setId}/tests/${test.testId}` },
+          { label: test.title },
         ] : [
           { label: 'Reading Tests', href: '/ielts/reading' },
           { label: test.title },

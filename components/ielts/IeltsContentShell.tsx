@@ -106,6 +106,12 @@ export function IeltsContentShell({
 
   const selectedSet = setFilters?.find((s) => s.setId === selectedSetId)
 
+  const testFilterOptions = selectedSet
+    ? selectedSet.tests.map((t) => ({ value: t.testId, label: t.testTitle }))
+    : (setFilters?.flatMap((s) =>
+        s.tests.map((t) => ({ value: t.testId, label: `${s.setTitle} — ${t.testTitle}` }))
+      ) ?? [])
+
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false
@@ -149,7 +155,7 @@ export function IeltsContentShell({
     }
   }
 
-  const filterSlot = setFilters ? (
+  const filterSlot = setFilters !== undefined ? (
     <div className="flex items-center gap-2">
       <span className="text-xs font-medium text-muted-foreground">Set:</span>
       <SearchableSelect
@@ -163,9 +169,8 @@ export function IeltsContentShell({
       <SearchableSelect
         value={selectedTestId}
         onChange={handleTestChange}
-        options={(selectedSet?.tests ?? []).map((t) => ({ value: t.testId, label: t.testTitle }))}
+        options={testFilterOptions}
         placeholder="All Tests"
-        disabled={!selectedSet}
       />
 
       {selectedSetId && (
@@ -195,6 +200,7 @@ export function IeltsContentShell({
         filterSlot={filterSlot}
         statsColumns={statsColumns}
         pagination={pagination}
+        showSetTestColumns={setFilters !== undefined}
       />
       <ContentFormModal
         open={modalOpen}

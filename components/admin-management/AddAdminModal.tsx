@@ -1,55 +1,73 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
-import type { ManagedAdmin } from '@/lib/types/admin'
+import type { AdminRoleOption, ManagedAdmin } from '@/lib/types/admin'
 import { AddAdminSchema } from '@/lib/validations/auth'
 import { fieldErrors } from '@/lib/validations/utils'
+import { createAdminAccount } from '@/lib/api/admin'
 
 type AddAdminModalProps = {
   open: boolean
+  roles: AdminRoleOption[]
   onClose: () => void
   onAdd: (admin: ManagedAdmin) => void
 }
 
-const roleOptions: { value: ManagedAdmin['role']; label: string }[] = [
-  { value: 'SuperAdmin', label: 'Super Admin' },
-  { value: 'ContentManager', label: 'Content Manager' },
-  { value: 'Moderator', label: 'Moderator' },
-]
+function formatRoleLabel(name: string) {
+  return name.replace(/([a-z])([A-Z])/g, '$1 $2')
+}
 
-export function AddAdminModal({ open, onClose, onAdd }: AddAdminModalProps) {
+export function AddAdminModal({ open, roles, onClose, onAdd }: AddAdminModalProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<ManagedAdmin['role']>('Moderator')
+  const [roleId, setRoleId] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (open && roles.length > 0 && !roleId) {
+      setRoleId(roles[0].id)
+    }
+  }, [open, roles, roleId])
+
+  const resetForm = () => {
+    setName('')
+    setEmail('')
+    setRoleId(roles[0]?.id ?? '')
+    setErrors({})
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const result = AddAdminSchema.safeParse({ name, email, role })
+    const result = AddAdminSchema.safeParse({ name, email, roleId })
     if (!result.success) {
       setErrors(fieldErrors(result.error))
       return
     }
     setErrors({})
+    setLoading(true)
 
-    const newAdmin: ManagedAdmin = {
-      id: `admin-${Date.now()}`,
-      name,
-      email,
-      role,
-      avatarUrl: `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
-      status: 'active',
+    try {
+      const { admin, temporaryPassword } = await createAdminAccount({ name, email, roleId })
+      onAdd(admin)
+      resetForm()
+      onClose()
+      if (temporaryPassword) {
+        toast.success(`Admin created. Temporary password: ${temporaryPassword}`)
+      } else {
+        toast.success('Admin created successfully.')
+      }
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to create admin.')
+    } finally {
+      setLoading(false)
     }
-    onAdd(newAdmin)
-    setName('')
-    setEmail('')
-    setRole('Moderator')
-    onClose()
   }
 
   return (
@@ -67,15 +85,29 @@ export function AddAdminModal({ open, onClose, onAdd }: AddAdminModalProps) {
         </div>
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Role</label>
-          <Select value={role} onChange={(e) => setRole(e.target.value as ManagedAdmin['role'])} className="w-full">
-            {roleOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
+          <Select
+            value={roleId}
+            onChange={(e) => setRoleId(e.target.value)}
+            className="w-full"
+            disabled={roles.length === 0}
+          >
+            {roles.length === 0 ? (
+              <option value="">No roles available</option>
+            ) : (
+              roles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {formatRoleLabel(role.name)}
+                </option>
+              ))
+            )}
           </Select>
+          {errors.roleId && <p className="text-xs text-destructive mt-1">{errors.roleId}</p>}
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-          <Button type="submit" size="sm">Add Admin</Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={loading}>Cancel</Button>
+          <Button type="submit" size="sm" disabled={loading || roles.length === 0}>
+            {loading ? 'Adding…' : 'Add Admin'}
+          </Button>
         </div>
       </form>
     </Modal>

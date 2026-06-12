@@ -3,7 +3,8 @@ export type AdminUser = {
   name: string
   email: string
   avatarUrl: string
-  role: 'SuperAdmin' | 'ContentManager' | 'Moderator'
+  role: string
+  roleId?: string
 }
 
 export type Permission =
@@ -21,7 +22,13 @@ export type AuditLogEntry = {
   timestamp: string
 }
 
-export type ManagedAdmin = AdminUser & { status: 'active' | 'disabled' }
+export type ManagedAdmin = AdminUser & { roleId: string; status: 'active' | 'disabled' }
+
+export type AdminRoleOption = {
+  id: string
+  name: string
+  description: string
+}
 
 export type DashboardStats = {
   totalUsers: number

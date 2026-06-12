@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { IeltsContentShell, type SetFilterOption } from '@/components/ielts/IeltsContentShell'
-import { Loading } from '@/components/ui/Loading'
 import type { ContentRow } from '@/components/ielts/ContentTable'
 import type { SetOption } from '@/components/ielts/ContentFormModal'
 import type { IeltsStatus } from '@/lib/types/ielts'
@@ -13,62 +12,54 @@ import {
   fetchReadingTestById,
   updateReadingTest,
   deleteReadingTest,
-  fetchIeltsSets,
   fetchFullIeltsSet,
   updateTestInSet,
 } from '@/lib/api/ielts'
 import { toReadingRows } from '@/lib/data/ielts-rows'
 
-const DEFAULT_PAGE_SIZE = 10
+type Props = {
+  initialRows: ContentRow[]
+  initialPage: number
+  initialPageSize: number
+  initialTotalPages: number
+  initialTotalCount: number
+  setFilters: SetFilterOption[]
+  createSetOptions: SetOption[]
+}
 
-export function ReadingContentClient() {
-  const [rows, setRows] = useState<ContentRow[]>([])
-  const [setFilters, setSetFilters] = useState<SetFilterOption[]>([])
-  const [createSetOptions, setCreateSetOptions] = useState<SetOption[]>([])
-
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalCount, setTotalCount] = useState(0)
-  const [loading, setLoading] = useState(true)
+export function ReadingContentClient({
+  initialRows,
+  initialPage,
+  initialPageSize,
+  initialTotalPages,
+  initialTotalCount,
+  setFilters,
+  createSetOptions,
+}: Props) {
+  const [rows, setRows] = useState<ContentRow[]>(initialRows)
+  const [page, setPage] = useState(initialPage)
+  const [pageSize, setPageSize] = useState(initialPageSize)
+  const [totalPages, setTotalPages] = useState(initialTotalPages)
+  const [totalCount, setTotalCount] = useState(initialTotalCount)
+  const [loading, setLoading] = useState(false)
 
   const [selectedSetId, setSelectedSetId] = useState('')
   const [selectedTestId, setSelectedTestId] = useState('')
+  const skipInitialFetch = useRef(true)
 
   useEffect(() => {
-    async function loadFilters() {
-      const setsPage = await fetchIeltsSets(1, 100)
-
-      const fullSets = (await Promise.all(
-        setsPage.items.map((s) => fetchFullIeltsSet(s.id).catch(() => null))
-      )).filter((s): s is NonNullable<typeof s> => s !== null)
-
-      setSetFilters(fullSets.map((set) => ({
-        setId: set.id,
-        setTitle: set.title,
-        tests: set.tests
-          .map((test) => {
-            const section = test.sections.find((sec) => sec.skill === 'reading')
-            if (!section) return null
-            return { testId: test.id, testTitle: test.title, skillContentId: section.testId }
-          })
-          .filter(Boolean) as SetFilterOption['tests'],
-      })))
-
-      setCreateSetOptions(
-        fullSets
-          .map((set) => ({
-            id: set.id,
-            title: set.title,
-            tests: set.tests.map((t) => ({ id: t.id, title: t.title })),
-          }))
-          .filter((s) => s.tests.length > 0)
-      )
+    if (
+      skipInitialFetch.current &&
+      page === initialPage &&
+      pageSize === initialPageSize &&
+      !selectedSetId &&
+      !selectedTestId
+    ) {
+      skipInitialFetch.current = false
+      return
     }
-    loadFilters()
-  }, [])
+    skipInitialFetch.current = false
 
-  useEffect(() => {
     let cancelled = false
 
     const load = async () => {
@@ -132,8 +123,6 @@ export function ReadingContentClient() {
     setSelectedTestId(newTestId)
     setPage(1)
   }
-
-  if (loading && rows.length === 0) return <Loading />
 
   return (
     <IeltsContentShell

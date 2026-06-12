@@ -8,5 +8,5 @@ export const LoginSchema = z.object({
 export const AddAdminSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   email: z.string().email('Enter a valid email address'),
-  role: z.enum(['SuperAdmin', 'ContentManager', 'Moderator']),
+  roleId: z.string().min(1, 'Role is required'),
 })

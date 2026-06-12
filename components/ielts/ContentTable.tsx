@@ -52,6 +52,7 @@ type ContentTableProps = {
   filterSlot?: ReactNode
   statsColumns?: { key: string; header: string }[]
   pagination?: ServerPagination
+  showSetTestColumns?: boolean
 }
 
 const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = {
@@ -62,7 +63,7 @@ const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = 
 
 const DEFAULT_PAGE_SIZE = 10
 
-export function ContentTable({ title, description, initialRows, onNew, onEdit, onApiDelete, manageHrefPrefix, filterSlot, statsColumns, pagination }: ContentTableProps) {
+export function ContentTable({ title, description, initialRows, onNew, onEdit, onApiDelete, manageHrefPrefix, filterSlot, statsColumns, pagination, showSetTestColumns }: ContentTableProps) {
   const [rows, setRows] = useState(initialRows)
   useEffect(() => {
     setRows(initialRows)
@@ -118,8 +119,8 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
   }
 
   const isSetsTable = rows.length > 0 && rows[0].testCount !== undefined
-  const showSet = !isSetsTable && rows.some((r) => r.setName !== undefined)
-  const showTest = !isSetsTable && rows.some((r) => r.testName !== undefined)
+  const showSet = !isSetsTable && (showSetTestColumns || rows.some((r) => r.setName !== undefined))
+  const showTest = !isSetsTable && (showSetTestColumns || rows.some((r) => r.testName !== undefined))
   const showType = !isSetsTable && rows.some((r) => r.type !== undefined)
   const showStats = !isSetsTable && (statsColumns?.length ?? 0) > 0
   const showDetails = !isSetsTable && !showSet && !showTest && !showType && !showStats

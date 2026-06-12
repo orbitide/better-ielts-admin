@@ -7,6 +7,7 @@ import type {
   Transaction,
   ManagedAdmin,
   AuditLogEntry,
+  AdminRoleOption,
 } from '@/lib/types/admin'
 
 // ─── Users ───────────────────────────────────────────────────────────────────
@@ -192,15 +193,62 @@ export async function fetchAuditLog(): Promise<AuditLogEntry[]> {
 
 // ─── Admins ───────────────────────────────────────────────────────────────────
 
+type ApiManagedAdmin = {
+  id: string
+  name: string
+  email: string
+  avatarUrl: string
+  roleId: string
+  role: string
+  status: string
+}
+
+type ApiAdminRoleOption = {
+  id: string
+  name: string
+  description: string
+}
+
+function mapManagedAdmin(a: ApiManagedAdmin): ManagedAdmin {
+  return {
+    id: a.id,
+    name: a.name ?? '',
+    email: a.email ?? '',
+    avatarUrl: a.avatarUrl ?? '',
+    roleId: a.roleId,
+    role: a.role ?? '',
+    status: a.status === 'disabled' ? 'disabled' : 'active',
+  }
+}
+
 export async function fetchAdminAdmins(): Promise<ManagedAdmin[]> {
-  const { data } = await httpClient.get('/api/admin/users', { params: { pageSize: 100 } })
-  const result = data.data as { items: ApiUser[] }
-  return result.items.map((u) => ({
-    id: u.id,
-    name: u.name ?? '',
-    email: u.email ?? '',
-    avatarUrl: u.avatarUrl ?? '',
-    role: 'SuperAdmin' as ManagedAdmin['role'],
-    status: u.isActive ? 'active' : 'disabled',
-  }))
+  const { data } = await httpClient.get('/api/admin/auth/admins')
+  const admins = data.data as ApiManagedAdmin[]
+  return admins.map(mapManagedAdmin)
+}
+
+export async function fetchAssignableAdminRoles(): Promise<AdminRoleOption[]> {
+  const { data } = await httpClient.get('/api/admin/auth/admins/roles')
+  return (data.data as ApiAdminRoleOption[]) ?? []
+}
+
+export async function createAdminAccount(body: {
+  name: string
+  email: string
+  roleId: string
+}): Promise<{ admin: ManagedAdmin; temporaryPassword?: string }> {
+  const { data } = await httpClient.post('/api/admin/auth/admins', body)
+  const result = data.data as { admin: ApiManagedAdmin; temporaryPassword?: string | null }
+  return {
+    admin: mapManagedAdmin(result.admin),
+    temporaryPassword: result.temporaryPassword ?? undefined,
+  }
+}
+
+export async function updateAdminAccount(
+  id: string,
+  body: { roleId?: string; isActive?: boolean }
+): Promise<ManagedAdmin> {
+  const { data } = await httpClient.patch(`/api/admin/auth/admins/${id}`, body)
+  return mapManagedAdmin(data.data as ApiManagedAdmin)
 }

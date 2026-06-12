@@ -24,6 +24,8 @@ export type ListeningTest = {
   audioUrl: string | null
   status: IeltsStatus
   createdAt: string
+  setName?: string
+  testName?: string
 }
 
 export type WritingTask = {
@@ -35,6 +37,8 @@ export type WritingTask = {
   timeMinutes: number
   status: IeltsStatus
   createdAt: string
+  setName?: string
+  testName?: string
 }
 
 export type SpeakingSession = {
@@ -44,6 +48,8 @@ export type SpeakingSession = {
   partCount: number
   status: IeltsStatus
   createdAt: string
+  setName?: string
+  testName?: string
 }
 
 export type MockTest = {
@@ -154,6 +160,10 @@ export type ReadingTestDetail = {
   durationMinutes: number
   status: IeltsStatus
   createdAt: string
+  setId?: string
+  setName?: string
+  testId?: string
+  testName?: string
 }
 
 // ─── Listening nested types ───────────────────────────────────────────────────
