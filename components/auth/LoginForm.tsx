@@ -35,7 +35,6 @@ export function LoginForm() {
 
     if (ok) {
       const redirect = searchParams.get('redirect') ?? '/dashboard';
-      console.log('login success', redirect)
       router.replace(redirect)
     } else {
       setError(loginError ?? 'Invalid email or password.')

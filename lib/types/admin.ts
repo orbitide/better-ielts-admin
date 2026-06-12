@@ -5,6 +5,12 @@ export type AdminUser = {
   avatarUrl: string
   role: string
   roleId?: string
+  roles?: string[]
+  isEmailVerified?: boolean
+  mfaEnabled?: boolean
+  plan?: string
+  targetBand?: number | null
+  createdAt?: string
 }
 
 export type Permission =

@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import type { AdminUser } from '@/lib/types/admin'
 import { loginAction, logoutAction, refreshAction, meAction } from '@/app/actions/auth'
+import { setAuthCookies, clearAuthCookies } from '@/lib/auth/client-cookies'
 
 type AdminAuthState = {
   admin: AdminUser | null
@@ -30,6 +31,7 @@ export const useAdminAuthStore = create<AdminAuthState>()((set) => ({
   login: async (email, password) => {
     const result = await loginAction(email, password)
     if (result.ok) {
+      setAuthCookies(result.accessToken, result.refreshToken, result.expiresIn)
       set({ admin: result.admin, isAuthenticated: true })
       return { ok: true }
     }
@@ -37,14 +39,17 @@ export const useAdminAuthStore = create<AdminAuthState>()((set) => ({
   },
   logout: async () => {
     await logoutAction()
+    clearAuthCookies()
     set({ admin: null, isAuthenticated: false })
   },
   refresh: async () => {
-    const ok = await refreshAction()
-    if (!ok) {
+    const result = await refreshAction()
+    if (!result.ok) {
       set({ admin: null, isAuthenticated: false })
+      return false
     }
-    return ok
+    setAuthCookies(result.accessToken, result.refreshToken, result.expiresIn)
+    return true
   },
   setHasHydrated: (has) => set({ _hasHydrated: has }),
 }))
