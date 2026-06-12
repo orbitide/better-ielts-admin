@@ -4,6 +4,7 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000').rep
 
 let connection: HubConnection | null = null
 let startPromise: Promise<void> | null = null
+let lastOnlineCount: number | null = null
 
 function getConnection(): HubConnection {
   if (!connection) {
@@ -12,6 +13,10 @@ function getConnection(): HubConnection {
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Warning)
       .build()
+
+    connection.on('OnlineCountChanged', (count: number) => {
+      lastOnlineCount = count
+    })
   }
   return connection
 }
@@ -33,6 +38,7 @@ export async function ensurePresenceConnection(): Promise<HubConnection> {
 
 export function onOnlineCountChanged(handler: (count: number) => void) {
   const conn = getConnection()
+  if (lastOnlineCount !== null) handler(lastOnlineCount)
   conn.on('OnlineCountChanged', handler)
   return () => conn.off('OnlineCountChanged', handler)
 }

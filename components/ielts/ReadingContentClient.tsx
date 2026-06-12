@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { IeltsContentShell, type SetFilterOption } from '@/components/ielts/IeltsContentShell'
+import { Loading } from '@/components/ui/Loading'
 import type { ContentRow } from '@/components/ielts/ContentTable'
 import type { SetOption } from '@/components/ielts/ContentFormModal'
 import type { IeltsStatus } from '@/lib/types/ielts'
@@ -17,18 +18,25 @@ import {
 } from '@/lib/api/ielts'
 import { toReadingRows } from '@/lib/data/ielts-rows'
 
+const DEFAULT_PAGE_SIZE = 10
+
 export function ReadingContentClient() {
   const [rows, setRows] = useState<ContentRow[]>([])
   const [setFilters, setSetFilters] = useState<SetFilterOption[]>([])
   const [createSetOptions, setCreateSetOptions] = useState<SetOption[]>([])
 
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  const [selectedSetId, setSelectedSetId] = useState('')
+  const [selectedTestId, setSelectedTestId] = useState('')
+
   useEffect(() => {
-    async function loadData() {
-      const [testsPage, setsPage] = await Promise.all([
-        fetchReadingTests(1, 100),
-        fetchIeltsSets(1, 100),
-      ])
-      setRows(toReadingRows(testsPage.items))
+    async function loadFilters() {
+      const setsPage = await fetchIeltsSets(1, 100)
 
       const fullSets = (await Promise.all(
         setsPage.items.map((s) => fetchIeltsSetById(s.id).catch(() => null))
@@ -56,8 +64,30 @@ export function ReadingContentClient() {
           .filter((s) => s.tests.length > 0)
       )
     }
-    loadData()
+    loadFilters()
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const load = async () => {
+      setLoading(true)
+      try {
+        const r = await fetchReadingTests(page, pageSize, undefined, selectedSetId || undefined, selectedTestId || undefined)
+        if (cancelled) return
+        setRows(toReadingRows(r.items))
+        setTotalPages(r.totalPages)
+        setTotalCount(r.totalCount)
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [page, pageSize, selectedSetId, selectedTestId])
 
   async function onCreate(data: { title: string; type: string; setId?: string; testId?: string }) {
     const test = await createReadingTest({ title: data.title, type: data.type })
@@ -88,10 +118,21 @@ export function ReadingContentClient() {
     await deleteReadingTest(id)
   }
 
-  async function onFilterChange({ setId, testId }: { setId?: string; testId?: string }) {
-    const { items } = await fetchReadingTests(1, 100, undefined, setId, testId)
-    return toReadingRows(items)
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(1)
   }
+
+  const handleSetFilterChange = ({ setId, testId }: { setId?: string; testId?: string }) => {
+    const newSetId = setId ?? ''
+    const newTestId = testId ?? ''
+    if (newSetId === selectedSetId && newTestId === selectedTestId) return
+    setSelectedSetId(newSetId)
+    setSelectedTestId(newTestId)
+    setPage(1)
+  }
+
+  if (loading && rows.length === 0) return <Loading />
 
   return (
     <IeltsContentShell
@@ -107,10 +148,11 @@ export function ReadingContentClient() {
         { key: 'passages', header: 'Passages' },
         { key: 'questions', header: 'Questions' },
       ]}
+      pagination={{ page, pageSize, totalPages, totalCount, loading, onPageChange: setPage, onPageSizeChange: handlePageSizeChange }}
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
-      onFilterChange={onFilterChange}
+      onSetFilterChange={handleSetFilterChange}
     />
   )
 }

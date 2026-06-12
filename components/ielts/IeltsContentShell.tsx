@@ -34,6 +34,7 @@ type IeltsContentShellProps = {
   onApiUpdate?: (id: string, data: { title: string; type: string; status: IeltsStatus }) => Promise<void>
   onApiDelete?: (id: string) => Promise<void>
   onFilterChange?: (filter: { setId?: string; testId?: string }) => Promise<ContentRow[]>
+  onSetFilterChange?: (filter: { setId?: string; testId?: string }) => void
 }
 
 export function IeltsContentShell({
@@ -51,6 +52,7 @@ export function IeltsContentShell({
   onApiUpdate,
   onApiDelete,
   onFilterChange,
+  onSetFilterChange,
 }: IeltsContentShellProps) {
   const [rows, setRows] = useState(initialRows)
   useEffect(() => {
@@ -113,6 +115,10 @@ export function IeltsContentShell({
 
     return () => { cancelled = true }
   }, [selectedSetId, selectedTestId, onFilterChange])
+
+  useEffect(() => {
+    onSetFilterChange?.({ setId: selectedSetId || undefined, testId: selectedTestId || undefined })
+  }, [selectedSetId, selectedTestId, onSetFilterChange])
 
   const handleSetChange = (value: string) => {
     setSelectedSetId(value)
