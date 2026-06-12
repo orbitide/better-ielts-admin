@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { ReactNode, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAdminAuthStore } from '@/lib/store/auth-store'
 
-export function AuthGate({ children }: { children: React.ReactNode }) {
+export function AuthGate({ children }: { children: ReactNode }) {
   const isAuthenticated = useAdminAuthStore((s) => s.isAuthenticated)
   const hasHydrated = useAdminAuthStore((s) => s._hasHydrated)
   const router = useRouter()

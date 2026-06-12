@@ -1,4 +1,4 @@
-import httpClient from '@/lib/api/http'
+import { httpClient } from '@/lib/api/http'
 import type { BackendRole, BackendPermission } from '@/lib/types/roles'
 
 export async function getRoles(): Promise<BackendRole[]> {

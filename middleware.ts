@@ -6,7 +6,9 @@ import { canAccessRoute } from '@/lib/auth/permissions'
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  const token = request.cookies.get(ACCESS_COOKIE)?.value
+  const token = request.cookies.get(ACCESS_COOKIE)?.value;
+
+  console.log('access token', token);
   if (!token) {
     return NextResponse.redirect(
       new URL(`/login?redirect=${encodeURIComponent(pathname)}`, request.url)
