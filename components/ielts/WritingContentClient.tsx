@@ -10,7 +10,7 @@ import {
   fetchWritingTaskById,
   updateWritingTask,
   deleteWritingTask,
-  fetchIeltsSetById,
+  fetchFullIeltsSet,
   updateTestInSet,
 } from '@/lib/api/ielts'
 import { toWritingRows } from '@/lib/data/ielts-rows'
@@ -27,7 +27,7 @@ export function WritingContentClient({ rows, setFilters, createSetOptions }: Pro
 
     if (data.setId && data.testId) {
       try {
-        const set = await fetchIeltsSetById(data.setId)
+        const set = await fetchFullIeltsSet(data.setId)
         const mockTest = set.tests.find((t) => t.id === data.testId)
         if (mockTest) {
           const existing = mockTest.sections.find((s) => s.skill === 'writing')

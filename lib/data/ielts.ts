@@ -5,7 +5,7 @@ import {
   fetchWritingTasks, fetchWritingTaskById,
   fetchSpeakingSessions, fetchSpeakingSessionById,
   fetchVocabTopics, fetchVocabTopicById,
-  fetchIeltsSets, fetchIeltsSetById,
+  fetchIeltsSets, fetchFullIeltsSet,
 } from '@/lib/api/ielts'
 
 // Re-throws non-404 errors so they surface as server errors rather than not-found pages.
@@ -71,11 +71,11 @@ export const getFullVocabTopic = cache(async (id: string) =>
 )
 
 export const getFullIeltsSet = cache(async (setId: string) =>
-  fetchIeltsSetById(setId).catch(onlyNotFound)
+  fetchFullIeltsSet(setId).catch(onlyNotFound)
 )
 
 export const getFullIeltsTestInSet = cache(async (setId: string, testId: string) => {
-  const set = await fetchIeltsSetById(setId).catch(onlyNotFound)
+  const set = await getFullIeltsSet(setId)
   if (!set) return undefined
   const test = set.tests.find(t => t.id === testId)
   if (!test) return undefined

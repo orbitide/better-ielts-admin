@@ -10,7 +10,7 @@ import {
   fetchListeningTestById,
   updateListeningTest,
   deleteListeningTest,
-  fetchIeltsSetById,
+  fetchFullIeltsSet,
   updateTestInSet,
 } from '@/lib/api/ielts'
 import { toListeningRows } from '@/lib/data/ielts-rows'
@@ -27,7 +27,7 @@ export function ListeningContentClient({ rows, setFilters, createSetOptions }: P
 
     if (data.setId && data.testId) {
       try {
-        const set = await fetchIeltsSetById(data.setId)
+        const set = await fetchFullIeltsSet(data.setId)
         const mockTest = set.tests.find((t) => t.id === data.testId)
         if (mockTest) {
           const existing = mockTest.sections.find((s) => s.skill === 'listening')

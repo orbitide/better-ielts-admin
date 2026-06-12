@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { IeltsContentShell, type SetFilterOption } from '@/components/ielts/IeltsContentShell'
 import { Loading } from '@/components/ui/Loading'
 import type { ContentRow } from '@/components/ielts/ContentTable'
@@ -13,7 +14,7 @@ import {
   updateReadingTest,
   deleteReadingTest,
   fetchIeltsSets,
-  fetchIeltsSetById,
+  fetchFullIeltsSet,
   updateTestInSet,
 } from '@/lib/api/ielts'
 import { toReadingRows } from '@/lib/data/ielts-rows'
@@ -39,7 +40,7 @@ export function ReadingContentClient() {
       const setsPage = await fetchIeltsSets(1, 100)
 
       const fullSets = (await Promise.all(
-        setsPage.items.map((s) => fetchIeltsSetById(s.id).catch(() => null))
+        setsPage.items.map((s) => fetchFullIeltsSet(s.id).catch(() => null))
       )).filter((s): s is NonNullable<typeof s> => s !== null)
 
       setSetFilters(fullSets.map((set) => ({
@@ -78,8 +79,8 @@ export function ReadingContentClient() {
         setRows(toReadingRows(r.items))
         setTotalPages(r.totalPages)
         setTotalCount(r.totalCount)
-      } catch {
-        // ignore
+      } catch (err) {
+        if (!cancelled) toast.error((err as Error).message ?? 'Failed to load reading tests.')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -94,7 +95,7 @@ export function ReadingContentClient() {
 
     if (data.setId && data.testId) {
       try {
-        const set = await fetchIeltsSetById(data.setId)
+        const set = await fetchFullIeltsSet(data.setId)
         const mockTest = set.tests.find((t) => t.id === data.testId)
         if (mockTest) {
           const existing = mockTest.sections.find((s) => s.skill === 'reading')
@@ -153,6 +154,8 @@ export function ReadingContentClient() {
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
       onSetFilterChange={handleSetFilterChange}
+      selectedSetId={selectedSetId}
+      selectedTestId={selectedTestId}
     />
   )
 }

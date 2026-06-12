@@ -7,7 +7,7 @@ import type {
   WritingTask, FullWritingTask,
   SpeakingSession, FullSpeakingSession,
   VocabTopic, FullVocabTopic, VocabWord, VocabWordDefinition,
-  IeltsSet, FullIeltsSet, IeltsTest, FullIeltsTest, MockTestSection,
+  IeltsSet, IeltsSetDetail, FullIeltsSet, IeltsTest, FullIeltsTest, MockTestSection,
   IeltsStatus,
 } from '@/lib/types/ielts'
 
@@ -340,31 +340,29 @@ export async function deleteVocabTopic(id: string): Promise<void> {
 // ─── Sets (Mock Tests) ────────────────────────────────────────────────────────
 
 type ApiMockTestSection = { id: string; skill: string; orderIndex: number; durationMinutes: number; skillContentId?: string }
-type ApiMockTestInSet = { id: string; orderIndex: number; title: string; durationMinutes: number; status: string; sections: ApiMockTestSection[] }
+type ApiMockTestInSet = { id: string; orderIndex: number; title: string; durationMinutes: number; status: string; sectionCount: number }
 type ApiIeltsSetSummary = { id: string; title: string; description: string; type: string; difficulty: string; testCount: number; status: string; createdAt: string }
-type ApiIeltsSetDetail = Omit<ApiIeltsSetSummary, 'testCount'> & { tests: ApiMockTestInSet[] }
+type ApiIeltsSetDetail = Omit<ApiIeltsSetSummary, 'testCount'>
 
 function mapIeltsSetSummary(r: ApiIeltsSetSummary): IeltsSet {
   return { id: r.id, title: r.title, description: r.description, type: r.type as IeltsSet['type'], difficulty: r.difficulty as IeltsSet['difficulty'], testCount: r.testCount, status: r.status as IeltsStatus, createdAt: r.createdAt }
 }
 
-function mapFullIeltsSet(r: ApiIeltsSetDetail): FullIeltsSet {
-  const setBase: IeltsSet = { id: r.id, title: r.title, description: r.description, type: r.type as IeltsSet['type'], difficulty: r.difficulty as IeltsSet['difficulty'], testCount: r.tests.length, status: r.status as IeltsStatus, createdAt: r.createdAt }
-  const tests: FullIeltsTest[] = r.tests.map(t => {
-    const testBase: IeltsTest = { id: t.id, setId: r.id, orderIndex: t.orderIndex, title: t.title, durationMinutes: t.durationMinutes, sectionCount: t.sections.length, status: t.status as IeltsStatus, createdAt: '' }
-    const sections: MockTestSection[] = t.sections.map(s => ({ id: s.id, skill: s.skill as MockTestSection['skill'], orderIndex: s.orderIndex, durationMinutes: s.durationMinutes, testId: s.skillContentId ?? '' }))
-    return { ...testBase, sections }
-  })
-  return { ...setBase, tests }
+function mapIeltsSetDetail(r: ApiIeltsSetDetail): IeltsSetDetail {
+  return { id: r.id, title: r.title, description: r.description, type: r.type as IeltsSet['type'], difficulty: r.difficulty as IeltsSet['difficulty'], status: r.status as IeltsStatus, createdAt: r.createdAt }
 }
 
-function mapMockTestInSet(t: ApiMockTestInSet, setId: string): FullIeltsTest {
-  const base: IeltsTest = { id: t.id, setId, orderIndex: t.orderIndex, title: t.title, durationMinutes: t.durationMinutes, sectionCount: t.sections.length, status: t.status as IeltsStatus, createdAt: '' }
-  const sections: MockTestSection[] = t.sections.map(s => ({ id: s.id, skill: s.skill as MockTestSection['skill'], orderIndex: s.orderIndex, durationMinutes: s.durationMinutes, testId: t.id }))
-  return { ...base, sections }
+function mapMockTestSection(s: ApiMockTestSection): MockTestSection {
+  return { id: s.id, skill: s.skill as MockTestSection['skill'], orderIndex: s.orderIndex, durationMinutes: s.durationMinutes, testId: s.skillContentId ?? '' }
+}
+
+function mapMockTestInSet(t: ApiMockTestInSet, setId: string): IeltsTest {
+  return { id: t.id, setId, orderIndex: t.orderIndex, title: t.title, durationMinutes: t.durationMinutes, sectionCount: t.sectionCount, status: t.status as IeltsStatus, createdAt: '' }
 }
 
 export type IeltsSetsPage = { items: IeltsSet[]; totalCount: number; totalPages: number; page: number; pageSize: number }
+export type SetTestsPage = { items: IeltsTest[]; totalCount: number; totalPages: number; page: number; pageSize: number }
+export type TestSectionsPage = { items: MockTestSection[]; totalCount: number; totalPages: number; page: number; pageSize: number }
 
 export async function fetchIeltsSets(page = 1, pageSize = 20, status?: string): Promise<IeltsSetsPage> {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
@@ -374,9 +372,35 @@ export async function fetchIeltsSets(page = 1, pageSize = 20, status?: string): 
   return { items: r.items.map(mapIeltsSetSummary), totalCount: r.totalCount, totalPages: r.totalPages, page: r.page, pageSize: r.pageSize }
 }
 
-export async function fetchIeltsSetById(id: string): Promise<FullIeltsSet> {
+export async function fetchIeltsSetById(id: string): Promise<IeltsSetDetail> {
   const { data } = await httpClient.get<ApiResponse<ApiIeltsSetDetail>>(`/api/admin/ielts/sets/${id}`)
-  return mapFullIeltsSet(data.data)
+  return mapIeltsSetDetail(data.data)
+}
+
+// Tests within a Set (paginated) — no sections embedded; fetch via fetchTestSections.
+export async function fetchSetTests(setId: string, page = 1, pageSize = 50): Promise<SetTestsPage> {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+  const { data } = await httpClient.get<ApiResponse<PagedResult<ApiMockTestInSet>>>(`/api/admin/ielts/sets/${setId}/tests?${params}`)
+  const r = data.data
+  return { items: r.items.map((t) => mapMockTestInSet(t, setId)), totalCount: r.totalCount, totalPages: r.totalPages, page: r.page, pageSize: r.pageSize }
+}
+
+// Skill sections for a single test (paginated).
+export async function fetchTestSections(testId: string, page = 1, pageSize = 10): Promise<TestSectionsPage> {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+  const { data } = await httpClient.get<ApiResponse<PagedResult<ApiMockTestSection>>>(`/api/admin/ielts/sets/tests/${testId}/sections?${params}`)
+  const r = data.data
+  return { items: r.items.map(mapMockTestSection), totalCount: r.totalCount, totalPages: r.totalPages, page: r.page, pageSize: r.pageSize }
+}
+
+// Composes the Set + its tests + each test's sections via separate paginated calls.
+export async function fetchFullIeltsSet(setId: string): Promise<FullIeltsSet> {
+  const set = await fetchIeltsSetById(setId)
+  const testsPage = await fetchSetTests(setId, 1, 100)
+  const tests: FullIeltsTest[] = await Promise.all(
+    testsPage.items.map(async (t) => ({ ...t, sections: (await fetchTestSections(t.id, 1, 10)).items }))
+  )
+  return { ...set, testCount: testsPage.totalCount, tests }
 }
 
 export async function createIeltsSet(payload: { title: string; type?: string }): Promise<IeltsSet> {
@@ -384,9 +408,9 @@ export async function createIeltsSet(payload: { title: string; type?: string }):
   return mapIeltsSetSummary(data.data)
 }
 
-export async function updateIeltsSet(id: string, set: FullIeltsSet): Promise<FullIeltsSet> {
+export async function updateIeltsSet(id: string, set: Pick<IeltsSet, 'title' | 'description' | 'type' | 'difficulty' | 'status'>): Promise<IeltsSetDetail> {
   const { data } = await httpClient.put<ApiResponse<ApiIeltsSetDetail>>(`/api/admin/ielts/sets/${id}`, { title: set.title, description: set.description, type: set.type, difficulty: set.difficulty, status: set.status })
-  return mapFullIeltsSet(data.data)
+  return mapIeltsSetDetail(data.data)
 }
 
 export async function deleteIeltsSet(id: string): Promise<void> {
@@ -395,12 +419,12 @@ export async function deleteIeltsSet(id: string): Promise<void> {
 
 export async function addTestToSet(setId: string, payload: { title: string; orderIndex?: number; durationMinutes?: number; sections?: { skill: string; orderIndex: number; durationMinutes: number }[] }): Promise<FullIeltsTest> {
   const { data } = await httpClient.post<ApiResponse<ApiMockTestInSet>>(`/api/admin/ielts/sets/${setId}/tests`, { title: payload.title, orderIndex: payload.orderIndex ?? 1, durationMinutes: payload.durationMinutes ?? 170, sections: payload.sections ?? [] })
-  return mapMockTestInSet(data.data, setId)
+  return { ...mapMockTestInSet(data.data, setId), sections: [] }
 }
 
 export async function updateTestInSet(testId: string, setId: string, test: FullIeltsTest): Promise<FullIeltsTest> {
   const { data } = await httpClient.put<ApiResponse<ApiMockTestInSet>>(`/api/admin/ielts/sets/tests/${testId}`, { orderIndex: test.orderIndex, title: test.title, durationMinutes: test.durationMinutes, status: test.status, sections: test.sections.map(s => ({ skill: s.skill, orderIndex: s.orderIndex, durationMinutes: s.durationMinutes, skillContentId: s.testId || null })) })
-  return mapMockTestInSet(data.data, setId)
+  return { ...mapMockTestInSet(data.data, setId), sections: test.sections }
 }
 
 export async function deleteTestFromSet(testId: string): Promise<void> {

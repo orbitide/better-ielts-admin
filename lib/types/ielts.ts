@@ -308,6 +308,9 @@ export type IeltsSet = {
   createdAt: string
 }
 
+// Detail view of a single Set — testCount is derived separately from the paginated tests endpoint
+export type IeltsSetDetail = Omit<IeltsSet, 'testCount'>
+
 // One complete IELTS test (4 skills) within a Set — e.g. "Test 1"
 export type IeltsTest = {
   id: string

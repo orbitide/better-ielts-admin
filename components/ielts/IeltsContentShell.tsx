@@ -35,6 +35,8 @@ type IeltsContentShellProps = {
   onApiDelete?: (id: string) => Promise<void>
   onFilterChange?: (filter: { setId?: string; testId?: string }) => Promise<ContentRow[]>
   onSetFilterChange?: (filter: { setId?: string; testId?: string }) => void
+  selectedSetId?: string
+  selectedTestId?: string
 }
 
 export function IeltsContentShell({
@@ -53,6 +55,8 @@ export function IeltsContentShell({
   onApiDelete,
   onFilterChange,
   onSetFilterChange,
+  selectedSetId: selectedSetIdProp,
+  selectedTestId: selectedTestIdProp,
 }: IeltsContentShellProps) {
   const [rows, setRows] = useState(initialRows)
   useEffect(() => {
@@ -60,8 +64,11 @@ export function IeltsContentShell({
   }, [initialRows])
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<ContentRow | null>(null)
-  const [selectedSetId, setSelectedSetId] = useState('')
-  const [selectedTestId, setSelectedTestId] = useState('')
+  const isControlled = selectedSetIdProp !== undefined
+  const [internalSetId, setInternalSetId] = useState('')
+  const [internalTestId, setInternalTestId] = useState('')
+  const selectedSetId = isControlled ? selectedSetIdProp! : internalSetId
+  const selectedTestId = isControlled ? (selectedTestIdProp ?? '') : internalTestId
   const [filterLoading, setFilterLoading] = useState(false)
   const isFirstRender = useRef(true)
 
@@ -116,13 +123,30 @@ export function IeltsContentShell({
     return () => { cancelled = true }
   }, [selectedSetId, selectedTestId, onFilterChange])
 
-  useEffect(() => {
-    onSetFilterChange?.({ setId: selectedSetId || undefined, testId: selectedTestId || undefined })
-  }, [selectedSetId, selectedTestId, onSetFilterChange])
-
   const handleSetChange = (value: string) => {
-    setSelectedSetId(value)
-    setSelectedTestId('')
+    if (isControlled) {
+      onSetFilterChange?.({ setId: value || undefined, testId: undefined })
+    } else {
+      setInternalSetId(value)
+      setInternalTestId('')
+    }
+  }
+
+  const handleTestChange = (value: string) => {
+    if (isControlled) {
+      onSetFilterChange?.({ setId: selectedSetId || undefined, testId: value || undefined })
+    } else {
+      setInternalTestId(value)
+    }
+  }
+
+  const handleClear = () => {
+    if (isControlled) {
+      onSetFilterChange?.({ setId: undefined, testId: undefined })
+    } else {
+      setInternalSetId('')
+      setInternalTestId('')
+    }
   }
 
   const filterSlot = setFilters ? (
@@ -138,7 +162,7 @@ export function IeltsContentShell({
       <span className="text-xs font-medium text-muted-foreground">Test:</span>
       <SearchableSelect
         value={selectedTestId}
-        onChange={setSelectedTestId}
+        onChange={handleTestChange}
         options={(selectedSet?.tests ?? []).map((t) => ({ value: t.testId, label: t.testTitle }))}
         placeholder="All Tests"
         disabled={!selectedSet}
@@ -146,7 +170,7 @@ export function IeltsContentShell({
 
       {selectedSetId && (
         <button
-          onClick={() => { setSelectedSetId(''); setSelectedTestId('') }}
+          onClick={handleClear}
           className="text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           Clear
@@ -160,7 +184,7 @@ export function IeltsContentShell({
   return (
     <>
       <ContentTable
-        key={`${selectedSetId}-${selectedTestId}`}
+        key={isControlled ? undefined : `${selectedSetId}-${selectedTestId}`}
         title={title}
         description={description}
         initialRows={rows}
