@@ -85,7 +85,7 @@ export async function createReadingTest(payload: { title: string; type?: string;
   return mapReadingTestDetail(data.data)
 }
 
-export async function updateReadingTest(id: string, payload: { title: string; type: string; durationMinutes: number; status: IeltsStatus }): Promise<ReadingTestDetail> {
+export async function updateReadingTest(id: string, payload: { title: string; type: string; durationMinutes: number; status: IeltsStatus; setId?: string; testId?: string }): Promise<ReadingTestDetail> {
   const { data } = await httpClient.put<ApiResponse<ApiReadingTestDetail>>(`/api/admin/ielts/reading/${id}`, payload)
   return mapReadingTestDetail(data.data)
 }

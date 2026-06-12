@@ -13,7 +13,6 @@ import {
   updateReadingTest,
   deleteReadingTest,
   linkContentToTest,
-  unlinkContentFromTest,
 } from '@/lib/api/ielts'
 import { toReadingRows } from '@/lib/data/ielts-rows'
 
@@ -93,16 +92,7 @@ export function ReadingContentClient({
 
   async function onUpdate(id: string, data: { title: string; type: string; status: IeltsStatus; setId?: string; testId?: string }) {
     const current = await fetchReadingTestById(id)
-    await updateReadingTest(id, { title: data.title, type: data.type, durationMinutes: current.durationMinutes, status: data.status })
-
-    if (current.setId !== data.setId || current.testId !== data.testId) {
-      if (current.setId && current.testId) {
-        try { await unlinkContentFromTest(current.setId, current.testId, 'reading', id) } catch { /* best-effort */ }
-      }
-      if (data.setId && data.testId) {
-        try { await linkContentToTest(data.setId, data.testId, 'reading', id) } catch { /* best-effort */ }
-      }
-    }
+    await updateReadingTest(id, { title: data.title, type: data.type, durationMinutes: current.durationMinutes, status: data.status, setId: data.setId, testId: data.testId })
   }
 
   async function onDelete(id: string) {
