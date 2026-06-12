@@ -9,15 +9,15 @@ import { LoginSchema } from '@/lib/validations/auth'
 import { fieldErrors } from '@/lib/validations/utils'
 
 export function LoginForm() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState('superadmin@betterielts.com');
+  const [password, setPassword] = useState('123456a');
+  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
-  const login = useAdminAuthStore((s) => s.login)
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const login = useAdminAuthStore((s) => s.login);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
