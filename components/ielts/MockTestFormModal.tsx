@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
-import type { FullMockTest, IeltsStatus } from '@/lib/types/ielts'
+import type { IeltsStatus } from '@/lib/types/ielts'
 import { MockTestSchema } from '@/lib/validations/ielts'
 import { fieldErrors } from '@/lib/validations/utils'
 

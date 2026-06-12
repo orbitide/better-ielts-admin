@@ -190,6 +190,8 @@ export type ListeningSection = {
 }
 
 export type FullListeningTest = ListeningTest & {
+  setId?: string
+  testId?: string
   sections: ListeningSection[]
 }
 
@@ -268,6 +270,8 @@ export type ListeningLayout = {
 // ─── Writing nested types ─────────────────────────────────────────────────────
 
 export type FullWritingTask = WritingTask & {
+  setId?: string
+  testId?: string
   imageUrl?: string
   imageAlt?: string
   sampleAnswer?: string
@@ -285,23 +289,18 @@ export type SpeakingPart = {
 }
 
 export type FullSpeakingSession = SpeakingSession & {
+  setId?: string
+  testId?: string
   parts: SpeakingPart[]
 }
 
 // ─── Set (full MockTest) types ────────────────────────────────────────────────
 
 export type MockTestSection = {
-  id: string
   skill: 'listening' | 'reading' | 'writing' | 'speaking'
-  orderIndex: number
+  contentId: string
+  title: string
   durationMinutes: number
-  testId: string
-}
-
-export type FullMockTest = MockTest & {
-  description: string
-  difficulty: 'beginner' | 'intermediate' | 'advanced'
-  sections: MockTestSection[]
 }
 
 // ─── Set → Test hierarchy types ───────────────────────────────────────────────

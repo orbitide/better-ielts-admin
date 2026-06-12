@@ -31,8 +31,9 @@ type IeltsContentShellProps = {
   statsColumns?: { key: string; header: string }[]
   pagination?: ServerPagination
   onApiCreate?: (data: { title: string; type: string; setId?: string; testId?: string }) => Promise<{ id: string; createdAt: string }>
-  onApiUpdate?: (id: string, data: { title: string; type: string; status: IeltsStatus }) => Promise<void>
+  onApiUpdate?: (id: string, data: { title: string; type: string; status: IeltsStatus; setId?: string; testId?: string }) => Promise<void>
   onApiDelete?: (id: string) => Promise<void>
+  onApiGetDetail?: (id: string) => Promise<{ setId?: string; testId?: string }>
   onFilterChange?: (filter: { setId?: string; testId?: string }) => Promise<ContentRow[]>
   onSetFilterChange?: (filter: { setId?: string; testId?: string }) => void
   selectedSetId?: string
@@ -53,6 +54,7 @@ export function IeltsContentShell({
   onApiCreate,
   onApiUpdate,
   onApiDelete,
+  onApiGetDetail,
   onFilterChange,
   onSetFilterChange,
   selectedSetId: selectedSetIdProp,
@@ -73,20 +75,35 @@ export function IeltsContentShell({
   const isFirstRender = useRef(true)
 
   const handleNew = () => { setEditing(null); setModalOpen(true) }
-  const handleEdit = (row: ContentRow) => { setEditing(row); setModalOpen(true) }
+
+  const handleEdit = async (row: ContentRow) => {
+    let editingRow = row
+    if (onApiGetDetail) {
+      try {
+        const detail = await onApiGetDetail(row.id)
+        editingRow = { ...row, setId: detail.setId, testId: detail.testId }
+      } catch { /* fall back to row without ids */ }
+    }
+    setEditing(editingRow)
+    setModalOpen(true)
+  }
 
   const handleSave = async ({ title: t, type, status, setId, testId }: { title: string; type: string; status: IeltsStatus; setId?: string; testId?: string }) => {
     if (editing) {
       if (onApiUpdate) {
         try {
-          await onApiUpdate(editing.id, { title: t, type, status })
+          await onApiUpdate(editing.id, { title: t, type, status, setId, testId })
           toast.success('Changes saved.')
         } catch (err) {
           toast.error((err as Error).message ?? 'Failed to save changes.')
           return
         }
       }
-      setRows((prev) => prev.map((r) => (r.id === editing.id ? { ...r, title: t, meta: type, status } : r)))
+      const newSet = createSetOptions?.find((s) => s.id === setId)
+      const newTest = newSet?.tests.find((tt) => tt.id === testId)
+      setRows((prev) => prev.map((r) => (r.id === editing.id
+        ? { ...r, title: t, meta: type, status, setId, testId, setName: newSet?.title, testName: newTest?.title }
+        : r)))
     } else {
       if (onApiCreate) {
         let result: { id: string; createdAt: string }

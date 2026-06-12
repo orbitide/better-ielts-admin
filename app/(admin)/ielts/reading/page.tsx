@@ -27,7 +27,7 @@ export default async function ReadingPage() {
         .map((test) => {
           const section = test.sections.find((s) => s.skill === 'reading')
           if (!section) return null
-          return { testId: test.id, testTitle: test.title, skillContentId: section.testId }
+          return { testId: test.id, testTitle: test.title, skillContentId: section.contentId }
         })
         .filter(Boolean) as SetFilterOption['tests'],
     }))

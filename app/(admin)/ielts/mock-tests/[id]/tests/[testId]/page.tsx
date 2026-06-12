@@ -19,18 +19,11 @@ export default async function TestDetailPage({
   if (!result) notFound()
   const { set, test } = result
 
-  const titleMap: Record<string, string> = {}
-  reading.forEach((t) => { titleMap[t.id] = t.title })
-  listening.forEach((t) => { titleMap[t.id] = t.title })
-  writing.forEach((t) => { titleMap[t.id] = t.title })
-  speaking.forEach((t) => { titleMap[t.id] = t.title })
-
   return (
     <TestDetailShell
       setId={set.id}
       setTitle={set.title}
       test={test}
-      skillTitles={titleMap}
       availableSkills={{
         reading: reading.map((t) => ({ id: t.id, title: t.title })),
         listening: listening.map((t) => ({ id: t.id, title: t.title })),

@@ -49,6 +49,8 @@ export function ContentFormModal({
     if (editing) {
       setTitle(editing.title)
       setStatus(editing.status)
+      setSelectedSetId(editing.setId ?? '')
+      setSelectedTestId(editing.testId ?? '')
     } else {
       setTitle('')
       setType(typeOptions[0])
@@ -112,7 +114,7 @@ export function ContentFormModal({
           </Select>
         </div>
 
-        {!editing && setOptions && setOptions.length > 0 && (
+        {setOptions && setOptions.length > 0 && (
           <div className="space-y-3 pt-1 border-t border-border">
             <p className="text-xs text-muted-foreground pt-1">Assign to a mock test (optional)</p>
             <div className="space-y-1.5">

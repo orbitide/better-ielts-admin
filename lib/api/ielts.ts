@@ -146,7 +146,7 @@ export async function deleteReadingQuestion(questionId: string): Promise<void> {
 type ApiListeningQuestion = { id: string; questionNumber: number; type: string; stem: string; correctAnswer: string; options?: unknown }
 type ApiListeningSection = { id: string; sectionNumber: number; audioUrl: string; audioDurationSeconds: number; transcript: string; questions: ApiListeningQuestion[]; layout?: unknown }
 type ApiListeningTestSummary = { id: string; title: string; sectionCount: number; questionCount: number; durationMinutes: number; status: string; createdAt: string; setName?: string; testName?: string }
-type ApiFullListeningTest = { id: string; title: string; durationMinutes: number; status: string; createdAt: string; sections: ApiListeningSection[] }
+type ApiFullListeningTest = { id: string; title: string; durationMinutes: number; status: string; createdAt: string; setId?: string; setName?: string; testId?: string; testName?: string; sections: ApiListeningSection[] }
 
 function mapListeningQuestion(q: ApiListeningQuestion): ListeningQuestion {
   return { id: q.id, type: q.type as ListeningQuestion['type'], questionNumber: q.questionNumber, stem: q.stem, correctAnswer: q.correctAnswer, options: q.options as ListeningQuestion['options'] }
@@ -157,8 +157,8 @@ function mapListeningTestSummary(r: ApiListeningTestSummary): ListeningTest {
 }
 
 function mapFullListeningTest(r: ApiFullListeningTest): FullListeningTest {
-  const summary: ListeningTest = { id: r.id, title: r.title, sectionCount: r.sections.length, questionCount: r.sections.reduce((n, s) => n + s.questions.length, 0), durationMinutes: r.durationMinutes, audioUrl: null, status: r.status as IeltsStatus, createdAt: r.createdAt }
-  return { ...summary, sections: r.sections.map(s => ({ id: s.id, sectionNumber: s.sectionNumber as 1|2|3|4, audioUrl: s.audioUrl, audioDurationSeconds: s.audioDurationSeconds, transcript: s.transcript, questions: s.questions.map(mapListeningQuestion), layout: s.layout as ListeningSection['layout'] })) }
+  const summary: ListeningTest = { id: r.id, title: r.title, sectionCount: r.sections.length, questionCount: r.sections.reduce((n, s) => n + s.questions.length, 0), durationMinutes: r.durationMinutes, audioUrl: null, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName }
+  return { ...summary, setId: r.setId, testId: r.testId, sections: r.sections.map(s => ({ id: s.id, sectionNumber: s.sectionNumber as 1|2|3|4, audioUrl: s.audioUrl, audioDurationSeconds: s.audioDurationSeconds, transcript: s.transcript, questions: s.questions.map(mapListeningQuestion), layout: s.layout as ListeningSection['layout'] })) }
 }
 
 function mapListeningTestToUpdateRequest(test: FullListeningTest) {
@@ -202,14 +202,14 @@ export async function deleteListeningTest(id: string): Promise<void> {
 // ─── Writing ──────────────────────────────────────────────────────────────────
 
 type ApiWritingTaskSummary = { id: string; title: string; type: string; wordMinimum: number; timeMinutes: number; status: string; createdAt: string; setName?: string; testName?: string }
-type ApiWritingTaskDetail = ApiWritingTaskSummary & { prompt: string; imageUrl?: string; imageAlt?: string; sampleAnswer?: string }
+type ApiWritingTaskDetail = ApiWritingTaskSummary & { prompt: string; imageUrl?: string; imageAlt?: string; sampleAnswer?: string; setId?: string; testId?: string }
 
 function mapWritingTaskSummary(r: ApiWritingTaskSummary): WritingTask {
   return { id: r.id, title: r.title, type: r.type as WritingTask['type'], prompt: '', wordMinimum: r.wordMinimum, timeMinutes: r.timeMinutes, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName }
 }
 
 function mapFullWritingTask(r: ApiWritingTaskDetail): FullWritingTask {
-  return { id: r.id, title: r.title, type: r.type as WritingTask['type'], prompt: r.prompt, wordMinimum: r.wordMinimum, timeMinutes: r.timeMinutes, status: r.status as IeltsStatus, createdAt: r.createdAt, imageUrl: r.imageUrl, imageAlt: r.imageAlt, sampleAnswer: r.sampleAnswer }
+  return { id: r.id, title: r.title, type: r.type as WritingTask['type'], prompt: r.prompt, wordMinimum: r.wordMinimum, timeMinutes: r.timeMinutes, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName, setId: r.setId, testId: r.testId, imageUrl: r.imageUrl, imageAlt: r.imageAlt, sampleAnswer: r.sampleAnswer }
 }
 
 export type WritingTasksPage = { items: WritingTask[]; totalCount: number; totalPages: number; page: number; pageSize: number }
@@ -247,14 +247,14 @@ export async function deleteWritingTask(id: string): Promise<void> {
 
 type ApiSpeakingPart = { id: string; partNumber: number; topic: string; questions: string[]; cueCardPrompt?: string; preparationSeconds?: number; speakingMinutes: number }
 type ApiSpeakingSessionSummary = { id: string; title: string; topic: string; partCount: number; status: string; createdAt: string; setName?: string; testName?: string }
-type ApiFullSpeakingSession = { id: string; title: string; topic: string; status: string; createdAt: string; parts: ApiSpeakingPart[] }
+type ApiFullSpeakingSession = { id: string; title: string; topic: string; status: string; createdAt: string; setId?: string; setName?: string; testId?: string; testName?: string; parts: ApiSpeakingPart[] }
 
 function mapSpeakingSessionSummary(r: ApiSpeakingSessionSummary): SpeakingSession {
   return { id: r.id, title: r.title, topic: r.topic, partCount: r.partCount, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName }
 }
 
 function mapFullSpeakingSession(r: ApiFullSpeakingSession): FullSpeakingSession {
-  return { id: r.id, title: r.title, topic: r.topic, partCount: r.parts.length, status: r.status as IeltsStatus, createdAt: r.createdAt, parts: r.parts.map(p => ({ part: p.partNumber as 1|2|3, topic: p.topic, questions: p.questions, cueCardPrompt: p.cueCardPrompt, preparationSeconds: p.preparationSeconds, speakingMinutes: p.speakingMinutes })) }
+  return { id: r.id, title: r.title, topic: r.topic, partCount: r.parts.length, status: r.status as IeltsStatus, createdAt: r.createdAt, setName: r.setName, testName: r.testName, setId: r.setId, testId: r.testId, parts: r.parts.map(p => ({ part: p.partNumber as 1|2|3, topic: p.topic, questions: p.questions, cueCardPrompt: p.cueCardPrompt, preparationSeconds: p.preparationSeconds, speakingMinutes: p.speakingMinutes })) }
 }
 
 export type SpeakingSessionsPage = { items: SpeakingSession[]; totalCount: number; totalPages: number; page: number; pageSize: number }
@@ -339,7 +339,7 @@ export async function deleteVocabTopic(id: string): Promise<void> {
 
 // ─── Sets (Mock Tests) ────────────────────────────────────────────────────────
 
-type ApiMockTestSection = { id: string; skill: string; orderIndex: number; durationMinutes: number; skillContentId?: string }
+type ApiMockTestSection = { skill: string; contentId: string; title: string; durationMinutes: number }
 type ApiMockTestInSet = { id: string; orderIndex: number; title: string; durationMinutes: number; status: string; sectionCount: number }
 type ApiIeltsSetSummary = { id: string; title: string; description: string; type: string; difficulty: string; testCount: number; status: string; createdAt: string }
 type ApiIeltsSetDetail = Omit<ApiIeltsSetSummary, 'testCount'>
@@ -353,7 +353,7 @@ function mapIeltsSetDetail(r: ApiIeltsSetDetail): IeltsSetDetail {
 }
 
 function mapMockTestSection(s: ApiMockTestSection): MockTestSection {
-  return { id: s.id, skill: s.skill as MockTestSection['skill'], orderIndex: s.orderIndex, durationMinutes: s.durationMinutes, testId: s.skillContentId ?? '' }
+  return { skill: s.skill as MockTestSection['skill'], contentId: s.contentId, title: s.title, durationMinutes: s.durationMinutes }
 }
 
 function mapMockTestInSet(t: ApiMockTestInSet, setId: string): IeltsTest {
@@ -417,16 +417,38 @@ export async function deleteIeltsSet(id: string): Promise<void> {
   await httpClient.delete(`/api/admin/ielts/sets/${id}`)
 }
 
-export async function addTestToSet(setId: string, payload: { title: string; orderIndex?: number; durationMinutes?: number; sections?: { skill: string; orderIndex: number; durationMinutes: number }[] }): Promise<FullIeltsTest> {
+export async function addTestToSet(setId: string, payload: { title: string; orderIndex?: number; durationMinutes?: number; sections?: { skill: string; contentId: string }[] }): Promise<FullIeltsTest> {
   const { data } = await httpClient.post<ApiResponse<ApiMockTestInSet>>(`/api/admin/ielts/sets/${setId}/tests`, { title: payload.title, orderIndex: payload.orderIndex ?? 1, durationMinutes: payload.durationMinutes ?? 170, sections: payload.sections ?? [] })
   return { ...mapMockTestInSet(data.data, setId), sections: [] }
 }
 
 export async function updateTestInSet(testId: string, setId: string, test: FullIeltsTest): Promise<FullIeltsTest> {
-  const { data } = await httpClient.put<ApiResponse<ApiMockTestInSet>>(`/api/admin/ielts/sets/tests/${testId}`, { orderIndex: test.orderIndex, title: test.title, durationMinutes: test.durationMinutes, status: test.status, sections: test.sections.map(s => ({ skill: s.skill, orderIndex: s.orderIndex, durationMinutes: s.durationMinutes, skillContentId: s.testId || null })) })
+  const { data } = await httpClient.put<ApiResponse<ApiMockTestInSet>>(`/api/admin/ielts/sets/tests/${testId}`, { orderIndex: test.orderIndex, title: test.title, durationMinutes: test.durationMinutes, status: test.status, sections: test.sections.map(s => ({ skill: s.skill, contentId: s.contentId })) })
   return { ...mapMockTestInSet(data.data, setId), sections: test.sections }
 }
 
 export async function deleteTestFromSet(testId: string): Promise<void> {
   await httpClient.delete(`/api/admin/ielts/sets/tests/${testId}`)
+}
+
+// Points the given skill's section in `testId` (within `setId`) at `contentId`,
+// creating the section if the mock test doesn't have one for this skill yet.
+export async function linkContentToTest(setId: string, testId: string, skill: MockTestSection['skill'], contentId: string): Promise<void> {
+  const set = await fetchFullIeltsSet(setId)
+  const mockTest = set.tests.find((t) => t.id === testId)
+  if (!mockTest) return
+  const existing = mockTest.sections.find((s) => s.skill === skill)
+  const updatedSections = existing
+    ? mockTest.sections.map((s) => s.skill === skill ? { ...s, contentId } : s)
+    : [...mockTest.sections, { skill, contentId, title: '', durationMinutes: 0 }]
+  await updateTestInSet(testId, setId, { ...mockTest, sections: updatedSections })
+}
+
+// Clears the skill section's link in `testId` (within `setId`) if it currently points at `contentId`.
+export async function unlinkContentFromTest(setId: string, testId: string, skill: MockTestSection['skill'], contentId: string): Promise<void> {
+  const set = await fetchFullIeltsSet(setId)
+  const mockTest = set.tests.find((t) => t.id === testId)
+  if (!mockTest) return
+  const updatedSections = mockTest.sections.filter((s) => !(s.skill === skill && s.contentId === contentId))
+  await updateTestInSet(testId, setId, { ...mockTest, sections: updatedSections })
 }

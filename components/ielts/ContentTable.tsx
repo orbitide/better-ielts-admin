@@ -21,7 +21,9 @@ export type ContentRow = {
   id: string
   title: string
   meta?: string
+  setId?: string
   setName?: string
+  testId?: string
   testName?: string
   type?: string
   stats?: Record<string, string | number>

@@ -10,8 +10,8 @@ import {
   fetchSpeakingSessionById,
   updateSpeakingSession,
   deleteSpeakingSession,
-  fetchFullIeltsSet,
-  updateTestInSet,
+  linkContentToTest,
+  unlinkContentFromTest,
 } from '@/lib/api/ielts'
 import { toSpeakingRows } from '@/lib/data/ielts-rows'
 
@@ -26,25 +26,24 @@ export function SpeakingContentClient({ rows, setFilters, createSetOptions }: Pr
     const session = await createSpeakingSession({ title: data.title })
 
     if (data.setId && data.testId) {
-      try {
-        const set = await fetchFullIeltsSet(data.setId)
-        const mockTest = set.tests.find((t) => t.id === data.testId)
-        if (mockTest) {
-          const existing = mockTest.sections.find((s) => s.skill === 'speaking')
-          const updatedSections = existing
-            ? mockTest.sections.map((s) => s.skill === 'speaking' ? { ...s, testId: session.id } : s)
-            : [...mockTest.sections, { id: '', skill: 'speaking' as const, orderIndex: mockTest.sections.length + 1, durationMinutes: 15, testId: session.id }]
-          await updateTestInSet(data.testId, data.setId, { ...mockTest, sections: updatedSections })
-        }
-      } catch { /* linking is best-effort */ }
+      try { await linkContentToTest(data.setId, data.testId, 'speaking', session.id) } catch { /* best-effort */ }
     }
 
     return { id: session.id, createdAt: session.createdAt }
   }
 
-  async function onUpdate(id: string, data: { title: string; type: string; status: IeltsStatus }) {
+  async function onUpdate(id: string, data: { title: string; type: string; status: IeltsStatus; setId?: string; testId?: string }) {
     const current = await fetchSpeakingSessionById(id)
     await updateSpeakingSession(id, { ...current, title: data.title, status: data.status })
+
+    if (current.setId !== data.setId || current.testId !== data.testId) {
+      if (current.setId && current.testId) {
+        try { await unlinkContentFromTest(current.setId, current.testId, 'speaking', id) } catch { /* best-effort */ }
+      }
+      if (data.setId && data.testId) {
+        try { await linkContentToTest(data.setId, data.testId, 'speaking', id) } catch { /* best-effort */ }
+      }
+    }
   }
 
   async function onDelete(id: string) {
@@ -73,6 +72,10 @@ export function SpeakingContentClient({ rows, setFilters, createSetOptions }: Pr
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
+      onApiGetDetail={async (id) => {
+        const d = await fetchSpeakingSessionById(id)
+        return { setId: d.setId, testId: d.testId }
+      }}
       onFilterChange={onFilterChange}
     />
   )

@@ -45,10 +45,9 @@ type TestDetailShellProps = {
   setTitle: string
   test: FullIeltsTest
   availableSkills: Record<Skill, SkillOption[]>
-  skillTitles: Record<string, string>
 }
 
-export function TestDetailShell({ setId, setTitle, test: initial, availableSkills, skillTitles }: TestDetailShellProps) {
+export function TestDetailShell({ setId, setTitle, test: initial, availableSkills }: TestDetailShellProps) {
   const [sections, setSections] = useState(initial.sections)
   const [test, setTest] = useState(initial)
   const [changingSkill, setChangingSkill] = useState<Skill | null>(null)
@@ -88,23 +87,23 @@ export function TestDetailShell({ setId, setTitle, test: initial, availableSkill
 
   const openChange = (skill: Skill) => {
     setChangingSkill(skill)
-    setDraftId(sectionBySkill[skill]?.testId ?? '')
+    setDraftId(sectionBySkill[skill]?.contentId ?? '')
   }
 
   const handleSave = async () => {
     if (!changingSkill) return
 
+    const title = availableSkills[changingSkill].find((o) => o.id === draftId)?.title ?? ''
     let updatedSections: MockTestSection[]
     const existing = sectionBySkill[changingSkill]
     if (existing) {
-      updatedSections = sections.map((s) => s.skill === changingSkill ? { ...s, testId: draftId } : s)
+      updatedSections = sections.map((s) => s.skill === changingSkill ? { ...s, contentId: draftId, title } : s)
     } else {
       const newSection: MockTestSection = {
-        id: '',
         skill: changingSkill,
-        orderIndex: sections.length + 1,
+        contentId: draftId,
+        title,
         durationMinutes: skillConfig[changingSkill].duration,
-        testId: draftId,
       }
       updatedSections = [...sections, newSection]
     }
@@ -150,9 +149,9 @@ export function TestDetailShell({ setId, setTitle, test: initial, availableSkill
             const config = skillConfig[skill]
             const Icon = config.icon
             const section = sectionBySkill[skill]
-            const isAssigned = !!(section?.testId)
-            const title = isAssigned ? (skillTitles[section!.testId] ?? section!.testId) : null
-            const href = isAssigned ? `${skillHref[skill]}/${section!.testId}${contextParams()}` : null
+            const isAssigned = !!(section?.contentId)
+            const title = isAssigned ? section!.title : null
+            const href = isAssigned ? `${skillHref[skill]}/${section!.contentId}${contextParams()}` : null
 
             return (
               <div key={skill} className="rounded-xl border border-border bg-card p-4 flex items-start gap-4">
