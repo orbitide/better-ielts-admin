@@ -2,7 +2,7 @@ import { cache } from 'react'
 import { fetchBlogPosts, fetchBlogPostById, fetchBlogCategories } from '@/lib/api/blog'
 import type { BlogPostsPage } from '@/lib/api/blog'
 import type { ExamGuideSection, BandTable } from '@/lib/types/content'
-import httpClient from '@/lib/api/http'
+import { httpClient } from '@/lib/api/http'
 
 export const getBlogPosts = cache(async (page = 1, pageSize = 20) => {
   return fetchBlogPosts(page, pageSize)
