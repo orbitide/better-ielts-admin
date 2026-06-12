@@ -25,9 +25,11 @@ const SetsPage = () => {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    fetchIeltsSets(page, pageSize)
-      .then((r) => {
+
+    const load = async () => {
+      setLoading(true)
+      try {
+        const r = await fetchIeltsSets(page, pageSize)
         if (cancelled) return
         setRows(r.items.map((s) => ({
           id: s.id,
@@ -41,10 +43,14 @@ const SetsPage = () => {
         })))
         setTotalPages(r.totalPages)
         setTotalCount(r.totalCount)
-      })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setLoading(false) })
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
 
+    load()
     return () => { cancelled = true }
   }, [page, pageSize])
 

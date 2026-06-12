@@ -15,6 +15,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { DataTable, DataTableToolbar, DataTablePagination, type ColumnDef } from '@/components/ui/DataTable'
 import type { IeltsStatus } from '@/lib/types/ielts'
 import { RoleGate } from '@/components/auth/RoleGate'
+import { formatDate } from '@/lib/utils/utils'
 
 export type ContentRow = {
   id: string
@@ -225,7 +226,7 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
     {
       accessorKey: 'createdAt',
       header: 'Created',
-      cell: ({ row }) => <span className="text-muted-foreground">{row.original.createdAt}</span>,
+      cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.createdAt)}</span>,
       meta: { className: 'hidden md:table-cell' },
     },
     {

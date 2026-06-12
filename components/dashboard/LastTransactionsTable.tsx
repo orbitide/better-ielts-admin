@@ -1,5 +1,6 @@
 import type { Transaction } from '@/lib/types/admin'
 import { Badge } from '@/components/ui/Badge'
+import { formatDate } from '@/lib/utils/utils'
 
 const planVariant: Record<string, 'default' | 'success'> = {
   elite: 'default',
@@ -10,10 +11,6 @@ const statusVariant: Record<string, 'success' | 'destructive' | 'secondary'> = {
   success: 'success',
   failed: 'destructive',
   refunded: 'secondary',
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export function LastTransactionsTable({ transactions }: { transactions: Transaction[] }) {
