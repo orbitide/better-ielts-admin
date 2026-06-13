@@ -237,6 +237,7 @@ export async function createAdminAccount(body: {
   name: string
   email: string
   roleId: string
+  password?: string
 }): Promise<{ admin: ManagedAdmin; temporaryPassword?: string }> {
   const { data } = await httpClient.post('/api/admin/auth/admins', body)
   const result = data.data as { admin: ApiManagedAdmin; temporaryPassword?: string | null }

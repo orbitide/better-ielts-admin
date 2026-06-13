@@ -25,6 +25,7 @@ function formatRoleLabel(name: string) {
 export function AddAdminModal({ open, roles, onClose, onAdd }: AddAdminModalProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [roleId, setRoleId] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -38,6 +39,7 @@ export function AddAdminModal({ open, roles, onClose, onAdd }: AddAdminModalProp
   const resetForm = () => {
     setName('')
     setEmail('')
+    setPassword('')
     setRoleId(roles[0]?.id ?? '')
     setErrors({})
   }
@@ -45,7 +47,7 @@ export function AddAdminModal({ open, roles, onClose, onAdd }: AddAdminModalProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const result = AddAdminSchema.safeParse({ name, email, roleId })
+    const result = AddAdminSchema.safeParse({ name, email, roleId, password })
     if (!result.success) {
       setErrors(fieldErrors(result.error))
       return
@@ -54,7 +56,7 @@ export function AddAdminModal({ open, roles, onClose, onAdd }: AddAdminModalProp
     setLoading(true)
 
     try {
-      const { admin, temporaryPassword } = await createAdminAccount({ name, email, roleId })
+      const { admin, temporaryPassword } = await createAdminAccount({ name, email, roleId, password: password || undefined })
       onAdd(admin)
       resetForm()
       onClose()
@@ -82,6 +84,17 @@ export function AddAdminModal({ open, roles, onClose, onAdd }: AddAdminModalProp
           <label className="text-sm font-medium">Email</label>
           <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@betterielts.com" />
           {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Password</label>
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Leave blank to auto-generate"
+            autoComplete="new-password"
+          />
+          {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
         </div>
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Role</label>
