@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
 import { VocabWordFormModal } from './VocabWordFormModal'
+import { VocabWordViewModal } from './VocabWordViewModal'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable'
@@ -39,6 +40,7 @@ export function VocabTopicDetailShell({ topic: initial }: VocabTopicDetailShellP
   const [wordModalOpen, setWordModalOpen] = useState(false)
   const [editingWord, setEditingWord] = useState<VocabWord | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<VocabWord | null>(null)
+  const [viewingWord, setViewingWord] = useState<VocabWord | null>(null)
 
   const persist = async (updated: FullVocabTopic) => {
     const prev = topic
@@ -83,6 +85,7 @@ export function VocabTopicDetailShell({ topic: initial }: VocabTopicDetailShellP
 
   const openAddWord = () => { setEditingWord(null); setWordModalOpen(true) }
   const openEditWord = (word: VocabWord) => { setEditingWord(word); setWordModalOpen(true) }
+  const openViewWord = (word: VocabWord) => setViewingWord(word)
 
   const wordColumns: ColumnDef<VocabWord>[] = [
     {
@@ -123,6 +126,12 @@ export function VocabTopicDetailShell({ topic: initial }: VocabTopicDetailShellP
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-1 justify-end">
+          <button
+            onClick={() => openViewWord(row.original)}
+            className="rounded-md px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            View
+          </button>
           <button
             onClick={() => openEditWord(row.original)}
             className="rounded-md px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
@@ -224,6 +233,12 @@ export function VocabTopicDetailShell({ topic: initial }: VocabTopicDetailShellP
         onClose={() => setWordModalOpen(false)}
         editing={editingWord}
         onSave={handleWordSave}
+      />
+
+      <VocabWordViewModal
+        open={viewingWord !== null}
+        onClose={() => setViewingWord(null)}
+        word={viewingWord}
       />
 
       <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title="Delete Word">
