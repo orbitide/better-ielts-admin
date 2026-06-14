@@ -10,6 +10,7 @@ import {
   createVocabTopic,
   fetchVocabTopicById,
   updateVocabTopic,
+  updateVocabTopicStatus,
   deleteVocabTopic,
 } from '@/lib/api/ielts'
 
@@ -64,6 +65,10 @@ export function VocabContentClient() {
     await deleteVocabTopic(id)
   }
 
+  async function onToggleStatus(id: string, nextStatus: IeltsStatus) {
+    return updateVocabTopicStatus(id, nextStatus)
+  }
+
   const handlePageSizeChange = (size: number) => {
     setPageSize(size)
     setPage(1)
@@ -81,6 +86,7 @@ export function VocabContentClient() {
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
+      onApiToggleStatus={onToggleStatus}
     />
   )
 }

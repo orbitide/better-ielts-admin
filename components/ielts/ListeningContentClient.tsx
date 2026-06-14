@@ -11,6 +11,7 @@ import {
   createListeningTest,
   fetchListeningTestById,
   updateListeningTest,
+  updateListeningStatus,
   deleteListeningTest,
   fetchIeltsSets,
   fetchFullIeltsSet,
@@ -112,6 +113,10 @@ export function ListeningContentClient() {
     await deleteListeningTest(id)
   }
 
+  async function onToggleStatus(id: string, nextStatus: IeltsStatus) {
+    return updateListeningStatus(id, nextStatus)
+  }
+
   const handlePageSizeChange = (size: number) => {
     setPageSize(size)
     setPage(1)
@@ -145,6 +150,7 @@ export function ListeningContentClient() {
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
+      onApiToggleStatus={onToggleStatus}
       onApiGetDetail={async (id) => {
         const d = await fetchListeningTestById(id)
         return { setId: d.setId, testId: d.testId }

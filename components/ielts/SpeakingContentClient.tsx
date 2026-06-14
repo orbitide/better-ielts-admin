@@ -11,6 +11,7 @@ import {
   createSpeakingSession,
   fetchSpeakingSessionById,
   updateSpeakingSession,
+  updateSpeakingStatus,
   deleteSpeakingSession,
   fetchIeltsSets,
   fetchFullIeltsSet,
@@ -101,6 +102,10 @@ export function SpeakingContentClient() {
     await deleteSpeakingSession(id)
   }
 
+  async function onToggleStatus(id: string, nextStatus: IeltsStatus) {
+    return updateSpeakingStatus(id, nextStatus)
+  }
+
   const handlePageSizeChange = (size: number) => {
     setPageSize(size)
     setPage(1)
@@ -133,6 +138,7 @@ export function SpeakingContentClient() {
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
+      onApiToggleStatus={onToggleStatus}
       onApiGetDetail={async (id) => {
         const d = await fetchSpeakingSessionById(id)
         return { setId: d.setId, testId: d.testId }

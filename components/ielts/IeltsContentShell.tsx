@@ -33,6 +33,7 @@ type IeltsContentShellProps = {
   onApiCreate?: (data: { title: string; type: string; setId?: string; testId?: string }) => Promise<{ id: string; createdAt: string }>
   onApiUpdate?: (id: string, data: { title: string; type: string; status: IeltsStatus; setId?: string; testId?: string }) => Promise<void>
   onApiDelete?: (id: string) => Promise<void>
+  onApiToggleStatus?: (id: string, nextStatus: IeltsStatus) => Promise<{ status: IeltsStatus }>
   onApiGetDetail?: (id: string) => Promise<{ setId?: string; testId?: string }>
   onFilterChange?: (filter: { setId?: string; testId?: string }) => Promise<ContentRow[]>
   onSetFilterChange?: (filter: { setId?: string; testId?: string }) => void
@@ -54,6 +55,7 @@ export function IeltsContentShell({
   onApiCreate,
   onApiUpdate,
   onApiDelete,
+  onApiToggleStatus,
   onApiGetDetail,
   onFilterChange,
   onSetFilterChange,
@@ -119,6 +121,14 @@ export function IeltsContentShell({
         setRows((prev) => [{ id: `new-${Date.now()}`, title: t, meta: type, status, createdAt: new Date().toISOString().slice(0, 10) }, ...prev])
       }
     }
+  }
+
+  const handleToggleStatus = async (row: ContentRow) => {
+    if (!onApiToggleStatus) return
+    const next: IeltsStatus = row.status === 'published' ? 'draft' : 'published'
+    const result = await onApiToggleStatus(row.id, next)
+    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: result.status } : r)))
+    toast.success(result.status === 'published' ? 'Published.' : 'Unpublished.')
   }
 
   const selectedSet = setFilters?.find((s) => s.setId === selectedSetId)
@@ -213,6 +223,7 @@ export function IeltsContentShell({
         onNew={handleNew}
         onEdit={handleEdit}
         onApiDelete={onApiDelete}
+        onToggleStatus={onApiToggleStatus ? handleToggleStatus : undefined}
         manageHrefPrefix={manageHrefPrefix}
         filterSlot={filterSlot}
         statsColumns={statsColumns}

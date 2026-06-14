@@ -11,6 +11,7 @@ import {
   createWritingTask,
   fetchWritingTaskById,
   updateWritingTask,
+  updateWritingStatus,
   deleteWritingTask,
   fetchIeltsSets,
   fetchFullIeltsSet,
@@ -112,6 +113,10 @@ export function WritingContentClient() {
     await deleteWritingTask(id)
   }
 
+  async function onToggleStatus(id: string, nextStatus: IeltsStatus) {
+    return updateWritingStatus(id, nextStatus)
+  }
+
   const handlePageSizeChange = (size: number) => {
     setPageSize(size)
     setPage(1)
@@ -144,6 +149,7 @@ export function WritingContentClient() {
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
+      onApiToggleStatus={onToggleStatus}
       onApiGetDetail={async (id) => {
         const d = await fetchWritingTaskById(id)
         return { setId: d.setId, testId: d.testId }

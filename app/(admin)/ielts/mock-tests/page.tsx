@@ -10,6 +10,7 @@ import {
   createIeltsSet,
   fetchIeltsSetById,
   updateIeltsSet,
+  updateIeltsSetStatus,
   deleteIeltsSet,
 } from "@/lib/api/ielts";
 
@@ -85,6 +86,10 @@ const SetsPage = () => {
     await deleteIeltsSet(id);
   }
 
+  async function onToggleStatus(id: string, nextStatus: IeltsStatus) {
+    return updateIeltsSetStatus(id, nextStatus);
+  }
+
   if (loading && rows.length === 0) return <Loading />;
 
   return (
@@ -107,6 +112,7 @@ const SetsPage = () => {
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
+      onApiToggleStatus={onToggleStatus}
     />
   );
 };

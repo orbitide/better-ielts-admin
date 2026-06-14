@@ -90,6 +90,11 @@ export async function updateReadingTest(id: string, payload: { title: string; ty
   return mapReadingTestDetail(data.data)
 }
 
+export async function updateReadingStatus(id: string, status: IeltsStatus): Promise<{ status: IeltsStatus }> {
+  const { data } = await httpClient.patch<ApiResponse<ApiReadingTestDetail>>(`/api/admin/ielts/reading/${id}/status`, { status })
+  return { status: data.data.status as IeltsStatus }
+}
+
 export async function deleteReadingTest(id: string): Promise<void> {
   await httpClient.delete(`/api/admin/ielts/reading/${id}`)
 }
@@ -197,6 +202,11 @@ export async function updateListeningTest(id: string, payload: { title: string; 
   return mapListeningTestDetail(data.data)
 }
 
+export async function updateListeningStatus(id: string, status: IeltsStatus): Promise<{ status: IeltsStatus }> {
+  const { data } = await httpClient.patch<ApiResponse<ApiListeningTestDetail>>(`/api/admin/ielts/listening/${id}/status`, { status })
+  return { status: data.data.status as IeltsStatus }
+}
+
 export async function deleteListeningTest(id: string): Promise<void> {
   await httpClient.delete(`/api/admin/ielts/listening/${id}`)
 }
@@ -290,6 +300,11 @@ export async function updateWritingTask(id: string, task: FullWritingTask): Prom
   return mapFullWritingTask(data.data)
 }
 
+export async function updateWritingStatus(id: string, status: IeltsStatus): Promise<{ status: IeltsStatus }> {
+  const { data } = await httpClient.patch<ApiResponse<ApiWritingTaskDetail>>(`/api/admin/ielts/writing/${id}/status`, { status })
+  return { status: data.data.status as IeltsStatus }
+}
+
 export async function deleteWritingTask(id: string): Promise<void> {
   await httpClient.delete(`/api/admin/ielts/writing/${id}`)
 }
@@ -361,6 +376,11 @@ export async function updateSpeakingSession(id: string, session: FullSpeakingSes
   return mapSpeakingSessionDetail(data.data, session.partCount)
 }
 
+export async function updateSpeakingStatus(id: string, status: IeltsStatus): Promise<{ status: IeltsStatus }> {
+  const { data } = await httpClient.patch<ApiResponse<ApiSpeakingSessionDetail>>(`/api/admin/ielts/speaking/${id}/status`, { status })
+  return { status: data.data.status as IeltsStatus }
+}
+
 export async function deleteSpeakingSession(id: string): Promise<void> {
   await httpClient.delete(`/api/admin/ielts/speaking/${id}`)
 }
@@ -408,6 +428,11 @@ export async function createVocabTopic(payload: { title: string; difficulty?: st
 export async function updateVocabTopic(id: string, topic: FullVocabTopic): Promise<FullVocabTopic> {
   const { data } = await httpClient.put<ApiResponse<ApiVocabTopicDetail>>(`/api/admin/ielts/vocabulary/${id}`, { title: topic.title, slug: topic.slug, description: topic.description, iconName: topic.iconName, difficulty: topic.difficulty, status: topic.status, words: topic.words.map(mapVocabWordToRequest) })
   return mapFullVocabTopic(data.data)
+}
+
+export async function updateVocabTopicStatus(id: string, status: IeltsStatus): Promise<{ status: IeltsStatus }> {
+  const { data } = await httpClient.patch<ApiResponse<ApiVocabTopicDetail>>(`/api/admin/ielts/vocabulary/${id}/status`, { status })
+  return { status: data.data.status as IeltsStatus }
 }
 
 export async function deleteVocabTopic(id: string): Promise<void> {
@@ -490,6 +515,11 @@ export async function updateIeltsSet(id: string, set: Pick<IeltsSet, 'title' | '
   return mapIeltsSetDetail(data.data)
 }
 
+export async function updateIeltsSetStatus(id: string, status: IeltsStatus): Promise<{ status: IeltsStatus }> {
+  const { data } = await httpClient.patch<ApiResponse<ApiIeltsSetDetail>>(`/api/admin/ielts/sets/${id}/status`, { status })
+  return { status: data.data.status as IeltsStatus }
+}
+
 export async function deleteIeltsSet(id: string): Promise<void> {
   await httpClient.delete(`/api/admin/ielts/sets/${id}`)
 }
@@ -502,6 +532,11 @@ export async function addTestToSet(setId: string, payload: { title: string; orde
 export async function updateTestInSet(testId: string, setId: string, test: FullIeltsTest): Promise<FullIeltsTest> {
   const { data } = await httpClient.put<ApiResponse<ApiMockTestInSet>>(`/api/admin/ielts/sets/tests/${testId}`, { orderIndex: test.orderIndex, title: test.title, durationMinutes: test.durationMinutes, status: test.status, sections: test.sections.map(s => ({ skill: s.skill, contentId: s.contentId })) })
   return { ...mapMockTestInSet(data.data, setId), sections: test.sections }
+}
+
+export async function updateMockTestStatus(testId: string, status: IeltsStatus): Promise<{ status: IeltsStatus }> {
+  const { data } = await httpClient.patch<ApiResponse<ApiMockTestInSet>>(`/api/admin/ielts/sets/tests/${testId}/status`, { status })
+  return { status: data.data.status as IeltsStatus }
 }
 
 export async function deleteTestFromSet(testId: string): Promise<void> {

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Pencil, Plus, Settings2 } from 'lucide-react'
+import { Eye, EyeOff, Pencil, Plus, Settings2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -13,7 +13,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Breadcrumb } from './Breadcrumb'
 import { MockTestFormModal } from './MockTestFormModal'
 import type { FullIeltsSet, FullIeltsTest, IeltsStatus } from '@/lib/types/ielts'
-import { updateIeltsSet, addTestToSet, updateTestInSet } from '@/lib/api/ielts'
+import { updateIeltsSet, updateIeltsSetStatus, addTestToSet, updateTestInSet, updateMockTestStatus } from '@/lib/api/ielts'
 
 const difficultyVariant: Record<'beginner' | 'intermediate' | 'advanced', 'success' | 'warning' | 'secondary'> = {
   beginner: 'success',
@@ -83,6 +83,38 @@ export function SetDetailShell({ set: initial }: SetDetailShellProps) {
     }
   }
 
+  const [setStatusToggling, setSetStatusToggling] = useState(false)
+
+  const handleToggleSetStatus = async () => {
+    const next: IeltsStatus = set.status === 'published' ? 'draft' : 'published'
+    setSetStatusToggling(true)
+    try {
+      const result = await updateIeltsSetStatus(set.id, next)
+      setSet((prev) => ({ ...prev, status: result.status }))
+      toast.success(result.status === 'published' ? 'Set published.' : 'Set unpublished.')
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to update status.')
+    } finally {
+      setSetStatusToggling(false)
+    }
+  }
+
+  const [togglingTestId, setTogglingTestId] = useState<string | null>(null)
+
+  const handleToggleTestStatus = async (test: FullIeltsTest) => {
+    const next: IeltsStatus = test.status === 'published' ? 'draft' : 'published'
+    setTogglingTestId(test.id)
+    try {
+      const result = await updateMockTestStatus(test.id, next)
+      setSet((prev) => ({ ...prev, tests: prev.tests.map((t) => t.id === test.id ? { ...t, status: result.status } : t) }))
+      toast.success(result.status === 'published' ? 'Test published.' : 'Test unpublished.')
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to update status.')
+    } finally {
+      setTogglingTestId(null)
+    }
+  }
+
   const handleAddTest = async () => {
     if (!newTestTitle.trim()) return
     setSaving(true)
@@ -119,6 +151,16 @@ export function SetDetailShell({ set: initial }: SetDetailShellProps) {
           <Badge variant="secondary">{set.type}</Badge>
           <Badge variant={difficultyVariant[set.difficulty]}>{set.difficulty}</Badge>
           <span className="text-xs text-muted-foreground">{set.testCount} test{set.testCount !== 1 ? 's' : ''}</span>
+          <button
+            onClick={handleToggleSetStatus}
+            disabled={setStatusToggling}
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
+            title={set.status === 'published' ? 'Unpublish set' : 'Publish set'}
+          >
+            {set.status === 'published'
+              ? <EyeOff className="h-3.5 w-3.5" />
+              : <Eye className="h-3.5 w-3.5" />}
+          </button>
         </div>
       </div>
 
@@ -131,7 +173,14 @@ export function SetDetailShell({ set: initial }: SetDetailShellProps) {
           </p>
         ) : (
           sorted.map((test) => (
-            <TestRow key={test.id} setId={set.id} test={test} onEdit={openEditTest} />
+            <TestRow
+              key={test.id}
+              setId={set.id}
+              test={test}
+              onEdit={openEditTest}
+              onToggleStatus={handleToggleTestStatus}
+              toggling={togglingTestId === test.id}
+            />
           ))
         )}
       </div>
@@ -190,7 +239,7 @@ export function SetDetailShell({ set: initial }: SetDetailShellProps) {
   )
 }
 
-function TestRow({ setId, test, onEdit }: { setId: string; test: FullIeltsTest; onEdit: (test: FullIeltsTest) => void }) {
+function TestRow({ setId, test, onEdit, onToggleStatus, toggling }: { setId: string; test: FullIeltsTest; onEdit: (test: FullIeltsTest) => void; onToggleStatus: (test: FullIeltsTest) => void; toggling: boolean }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-4">
       <div className="rounded-lg bg-muted flex items-center justify-center h-9 w-9 text-sm font-semibold shrink-0">
@@ -208,6 +257,16 @@ function TestRow({ setId, test, onEdit }: { setId: string; test: FullIeltsTest; 
         <Badge variant={test.status === 'published' ? 'success' : test.status === 'draft' ? 'warning' : 'secondary'}>
           {test.status}
         </Badge>
+        <button
+          onClick={() => onToggleStatus(test)}
+          disabled={toggling}
+          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
+          title={test.status === 'published' ? 'Unpublish test' : 'Publish test'}
+        >
+          {test.status === 'published'
+            ? <EyeOff className="h-4 w-4" />
+            : <Eye className="h-4 w-4" />}
+        </button>
         <button
           onClick={() => onEdit(test)}
           className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Pencil, Trash2, Plus, Settings2 } from 'lucide-react'
+import { Pencil, Trash2, Plus, Settings2, Eye, EyeOff } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -50,6 +50,7 @@ type ContentTableProps = {
   onNew: () => void
   onEdit: (row: ContentRow) => void
   onApiDelete?: (id: string) => Promise<void>
+  onToggleStatus?: (row: ContentRow) => Promise<void>
   manageHrefPrefix?: string
   filterSlot?: ReactNode
   statsColumns?: { key: string; header: string }[]
@@ -65,7 +66,7 @@ const statusVariant: Record<IeltsStatus, 'success' | 'warning' | 'secondary'> = 
 
 const DEFAULT_PAGE_SIZE = 10
 
-export function ContentTable({ title, description, initialRows, onNew, onEdit, onApiDelete, manageHrefPrefix, filterSlot, statsColumns, pagination, showSetTestColumns }: ContentTableProps) {
+export function ContentTable({ title, description, initialRows, onNew, onEdit, onApiDelete, onToggleStatus, manageHrefPrefix, filterSlot, statsColumns, pagination, showSetTestColumns }: ContentTableProps) {
   const [rows, setRows] = useState(initialRows)
   useEffect(() => {
     setRows(initialRows)
@@ -78,6 +79,7 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
   const [, startTransition] = useTransition()
   const [deleteTarget, setDeleteTarget] = useState<ContentRow | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -118,6 +120,18 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
       startTransition(() => setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id)))
     }
     setDeleteTarget(null)
+  }
+
+  const handleToggleStatus = async (row: ContentRow) => {
+    if (!onToggleStatus) return
+    setTogglingId(row.id)
+    try {
+      await onToggleStatus(row)
+    } catch (err) {
+      toast.error((err as Error).message ?? 'Failed to update status.')
+    } finally {
+      setTogglingId(null)
+    }
   }
 
   const isSetsTable = rows.length > 0 && rows[0].testCount !== undefined
@@ -246,6 +260,20 @@ export function ContentTable({ title, description, initialRows, onNew, onEdit, o
             >
               <Settings2 className="h-3.5 w-3.5" />
             </Link>
+          )}
+          {onToggleStatus && (
+            <RoleGate permission="ielts:edit">
+              <button
+                onClick={() => handleToggleStatus(row.original)}
+                disabled={togglingId === row.original.id}
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
+                title={row.original.status === 'published' ? 'Unpublish' : 'Publish'}
+              >
+                {row.original.status === 'published'
+                  ? <EyeOff className="h-3.5 w-3.5" />
+                  : <Eye className="h-3.5 w-3.5" />}
+              </button>
+            </RoleGate>
           )}
           <RoleGate permission="ielts:edit">
             <button

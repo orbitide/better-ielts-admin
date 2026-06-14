@@ -11,6 +11,7 @@ import {
   createReadingTest,
   fetchReadingTestById,
   updateReadingTest,
+  updateReadingStatus,
   deleteReadingTest,
 } from '@/lib/api/ielts'
 import { toReadingRows } from '@/lib/data/ielts-rows'
@@ -93,6 +94,10 @@ export function ReadingContentClient({
     await deleteReadingTest(id)
   }
 
+  async function onToggleStatus(id: string, nextStatus: IeltsStatus) {
+    return updateReadingStatus(id, nextStatus)
+  }
+
   const handlePageSizeChange = (size: number) => {
     setPageSize(size)
     setPage(1)
@@ -125,6 +130,7 @@ export function ReadingContentClient({
       onApiCreate={onCreate}
       onApiUpdate={onUpdate}
       onApiDelete={onDelete}
+      onApiToggleStatus={onToggleStatus}
       onApiGetDetail={async (id) => {
         const d = await fetchReadingTestById(id)
         return { setId: d.setId, testId: d.testId }
